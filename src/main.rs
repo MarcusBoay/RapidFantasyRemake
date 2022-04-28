@@ -12,6 +12,8 @@ enum GameState {
 }
 
 const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
+const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
+const BACKGROUND_COLOR: Color = Color::BLACK;
 
 fn main() {
     App::new()
@@ -22,11 +24,19 @@ fn main() {
             present_mode: PresentMode::Fifo,
             ..default()
         })
+        .insert_resource(ClearColor(BACKGROUND_COLOR))
+        .add_startup_system(setup)
         .add_plugins(DefaultPlugins)
         .add_state(GameState::MainMenu)
         .add_plugin(mainmenu::MainMenuPlugin)
         .add_plugin(game::RapidFantasyPlugin)
         .run();
+}
+
+fn setup(mut commands: Commands) {
+    // Cameras
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(UiCameraBundle::default());
 }
 
 mod mainmenu {
@@ -37,7 +47,6 @@ mod mainmenu {
 
     impl Plugin for MainMenuPlugin {
         fn build(&self, app: &mut App) {
-            // TODO: add main menu state
             app.add_state(MenuState::Main)
                 .add_system_set(
                     SystemSet::on_enter(GameState::MainMenu).with_system(main_menu_setup),
@@ -121,17 +130,21 @@ mod mainmenu {
             color: TEXT_COLOR,
         };
 
-        // FIXME:
-        // Why is this not showing? Could it be a z value issue??
+        // Main menu image
+        let overworld_image = asset_server.load("main_menu.png");
+        // Button panel
         commands
             .spawn_bundle(NodeBundle {
                 style: Style {
                     margin: Rect::all(Val::Auto),
                     flex_direction: FlexDirection::ColumnReverse,
                     align_items: AlignItems::Center,
+                    align_content: AlignContent::Center,
+                    justify_content: JustifyContent::Center,
+                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
                     ..default()
                 },
-                color: Color::CRIMSON.into(),
+                image: overworld_image.into(),
                 ..default()
             })
             .insert(OnMainMenuScreen)
@@ -219,13 +232,10 @@ mod mainmenu {
 }
 
 mod game {
-    use super::GameState;
+    use super::{GameState, BACKGROUND_SIZE};
     use bevy::{math::const_vec2, prelude::*};
 
     const TIME_STEP: f32 = 1.0 / 60.0;
-
-    const BACKGROUND_COLOR: Color = Color::BLACK;
-    const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
 
     const PLAYER_SPEED: f32 = 640.0;
     const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
@@ -236,7 +246,6 @@ mod game {
     impl Plugin for RapidFantasyPlugin {
         fn build(&self, app: &mut App) {
             app.add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(setup))
-                // .insert_resource(ClearColor(BACKGROUND_COLOR))
                 .add_system_set(
                     SystemSet::on_update(GameState::Overworld)
                         .with_system(move_player)
@@ -250,10 +259,6 @@ mod game {
     struct OnGameScreen;
 
     fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-        // Cameras
-        commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-        commands.spawn_bundle(UiCameraBundle::default());
-
         // FIXME: images take some time to load...
         // Overworld
         let overworld_image = asset_server.load("bckimg1.png");

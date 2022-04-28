@@ -40,12 +40,12 @@ enum GameState {
     Exit,
 }
 
-const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
+const TEXT_COLOR: Color = Color::BLACK;
 const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
 const BACKGROUND_COLOR: Color = Color::BLACK;
 
 #[derive(AssetCollection)]
-struct ImageAssets {
+pub struct ImageAssets {
     #[asset(path = "main_menu.png")]
     main_menu: Handle<Image>,
     #[asset(path = "overworld1.png")]
@@ -62,7 +62,7 @@ struct ImageAssets {
 }
 
 #[derive(AssetCollection)]
-struct FontAssets {
+pub struct FontAssets {
     #[asset(path = "fonts/FiraMono-Medium.ttf")]
     font: Handle<Font>,
 }

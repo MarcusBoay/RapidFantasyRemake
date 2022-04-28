@@ -19,7 +19,7 @@ impl Plugin for MainMenuPlugin {
             // When exiting the state, despawn everything that was spawned for this screen
             .add_system_set(
                 SystemSet::on_exit(GameState::MainMenu)
-                    .with_system(despawn_screen::<OnMainMenuScreen>),
+                    .with_system(despawn_screen::<MainMenuScreen>),
             );
     }
 }
@@ -56,7 +56,7 @@ enum MenuButtonAction {
 
 // Tag component used to tag entities added on the main menu screen
 #[derive(Component)]
-struct OnMainMenuScreen;
+struct MainMenuScreen;
 
 fn main_menu_setup(
     mut commands: Commands,
@@ -106,7 +106,7 @@ fn main_menu_setup(
             image: image_assets.main_menu.clone().into(),
             ..default()
         })
-        .insert(OnMainMenuScreen)
+        .insert(MainMenuScreen)
         .with_children(|parent| {
             // Display start game button
             parent

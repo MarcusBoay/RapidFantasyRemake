@@ -1,3 +1,4 @@
+mod battle;
 mod mainmenu; // why does this work?????
 mod overworld;
 use bevy::{math::const_vec2, prelude::*, window::PresentMode};
@@ -6,7 +7,7 @@ use bevy_asset_loader::{AssetCollection, AssetLoader};
 fn main() {
     let mut app = App::new();
     AssetLoader::new(GameState::Initialization)
-        .continue_to_state(GameState::MainMenu)
+        .continue_to_state(GameState::Battle) // TODO: change back to MainMenu after done testing
         .with_collection::<ImageAssets>()
         .with_collection::<FontAssets>()
         .build(&mut app);
@@ -22,7 +23,8 @@ fn main() {
     .add_startup_system(setup_main)
     .add_plugins(DefaultPlugins)
     .add_plugin(mainmenu::MainMenuPlugin)
-    .add_plugin(overworld::RapidFantasyPlugin)
+    .add_plugin(overworld::OverworldPlugin)
+    .add_plugin(battle::BattlePlugin)
     .run();
 }
 

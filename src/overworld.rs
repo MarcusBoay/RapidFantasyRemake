@@ -1,4 +1,4 @@
-use crate::ImageAssets;
+use crate::{despawn_screen, ImageAssets};
 
 use super::{GameState, BACKGROUND_SIZE};
 use bevy::{math::const_vec2, prelude::*};
@@ -9,28 +9,36 @@ const PLAYER_SPEED: f32 = 640.0;
 const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
 const PLAYER_SPRINT: f32 = 1.5;
 
-pub struct RapidFantasyPlugin;
+pub struct OverworldPlugin;
 
-impl Plugin for RapidFantasyPlugin {
+impl Plugin for OverworldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(setup))
+        app.add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(overworld_setup))
             .add_system_set(
                 SystemSet::on_update(GameState::Overworld)
                     .with_system(move_player)
-                    .with_system(change_player_image),
+                    .with_system(change_player_image)
+                    .with_system(spawn_monster),
+            )
+            // When exiting the state, despawn everything that was spawned for this screen
+            .add_system_set(
+                SystemSet::on_exit(GameState::Overworld)
+                    .with_system(despawn_screen::<OverworldScreen>),
             );
     }
 }
 
-// Tag component used to tag entities added on the game screen
 #[derive(Component)]
-struct OnGameScreen;
+struct OverworldScreen;
 
-fn setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
+#[derive(Component)]
+struct Player;
+
+fn overworld_setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
     // Overworld
     commands
         .spawn()
-        .insert(Overworld)
+        .insert(OverworldScreen)
         .insert_bundle(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(0., 0., 0.),
@@ -47,7 +55,7 @@ fn setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
     // Player
     commands.spawn().insert(Player).insert_bundle(SpriteBundle {
         transform: Transform {
-            translation: Vec3::new(0., 50., 100.),
+            translation: Vec3::new(0., 50., 100.), // TODO: use player's last known coords
             ..default()
         },
         texture: image_assets.player_down.clone(),
@@ -58,12 +66,6 @@ fn setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
         ..default()
     });
 }
-
-#[derive(Component)]
-struct Overworld;
-
-#[derive(Component)]
-struct Player;
 
 fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
@@ -121,5 +123,15 @@ fn change_player_image(
 
     if let Some(new_player_image) = new_player_image {
         *player_image = new_player_image;
+    }
+}
+
+// TODO: change to random chance to spawn
+// TODO: spawn final boss monster during interaction
+fn spawn_monster(keyboard_input: Res<Input<KeyCode>>, mut game_state: ResMut<State<GameState>>) {
+    if keyboard_input.just_pressed(KeyCode::P) {
+        // TODO: random chance
+        // change state to battle
+        game_state.set(GameState::Battle).unwrap();
     }
 }

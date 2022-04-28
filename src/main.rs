@@ -1,4 +1,4 @@
-use bevy::{math::const_vec3, prelude::*, render::render_resource::Texture};
+use bevy::{math::const_vec2, prelude::*};
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum GameState {
@@ -10,10 +10,11 @@ const TIME_STEP: f32 = 1.0 / 60.0;
 
 // TODO: replace with map image
 const TEMP_BACKGROUND_COLOR: Color = Color::WHITE;
-// TODO: replace with player image
-const TEMP_PLAYER_COLOR: Color = Color::PINK;
-const PLAYER_SIZE: Vec3 = const_vec3!([1.0, 1.0, 0.0]);
+
+// TODO: player should move 64 units per second.
 const PLAYER_SPEED: f32 = 640.0;
+const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
+const PLAYER_SPRINT: f32 = 1.5;
 
 fn main() {
     App::new()
@@ -47,12 +48,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn().insert(Player).insert_bundle(SpriteBundle {
         transform: Transform {
             translation: Vec3::new(0.0, 50.0, 0.0),
-            scale: PLAYER_SIZE,
             ..default()
         },
         texture: player_image,
         sprite: Sprite {
-            color: TEMP_PLAYER_COLOR,
+            custom_size: Some(PLAYER_SIZE),
             ..default()
         },
         ..default()
@@ -70,6 +70,7 @@ fn move_player(
     let mut direction_horizontal = 0.0;
     let mut direction_vertical = 0.0;
 
+    // Only mono-directional movement allowed.
     if keyboard_input.pressed(KeyCode::Left) {
         direction_horizontal -= 1.0;
     } else if keyboard_input.pressed(KeyCode::Right) {
@@ -78,6 +79,12 @@ fn move_player(
         direction_vertical += 1.0;
     } else if keyboard_input.pressed(KeyCode::Down) {
         direction_vertical -= 1.0;
+    }
+
+    // Sprinting.
+    if keyboard_input.pressed(KeyCode::LShift) {
+        direction_horizontal *= PLAYER_SPRINT;
+        direction_vertical *= PLAYER_SPRINT;
     }
 
     let new_player_position_x =

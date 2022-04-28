@@ -1,3 +1,4 @@
+use crate::ImageAssets;
 
 use super::{GameState, BACKGROUND_SIZE};
 use bevy::{math::const_vec2, prelude::*};
@@ -25,10 +26,8 @@ impl Plugin for RapidFantasyPlugin {
 #[derive(Component)]
 struct OnGameScreen;
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // FIXME: images take some time to load...
+fn setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
     // Overworld
-    let overworld_image = asset_server.load("bckimg1.png");
     commands
         .spawn()
         .insert(Overworld)
@@ -37,7 +36,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 translation: Vec3::new(0., 0., 0.),
                 ..default()
             },
-            texture: overworld_image,
+            texture: image_assets.overworld1.clone(),
             sprite: Sprite {
                 custom_size: Some(BACKGROUND_SIZE),
                 ..default()
@@ -46,13 +45,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 
     // Player
-    let player_image = asset_server.load("player_down.png");
     commands.spawn().insert(Player).insert_bundle(SpriteBundle {
         transform: Transform {
             translation: Vec3::new(0., 50., 100.),
             ..default()
         },
-        texture: player_image,
+        texture: image_assets.player_down.clone(),
         sprite: Sprite {
             custom_size: Some(PLAYER_SIZE),
             ..default()
@@ -105,17 +103,17 @@ fn move_player(
 fn change_player_image(
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<&mut Handle<Image>, With<Player>>,
-    asset_server: Res<AssetServer>,
+    image_assets: Res<ImageAssets>,
 ) {
     let mut player_image = query.single_mut();
     let new_player_image = if keyboard_input.pressed(KeyCode::Left) {
-        Some(asset_server.load("player_left.png"))
+        Some(image_assets.player_left.clone())
     } else if keyboard_input.pressed(KeyCode::Right) {
-        Some(asset_server.load("player_right.png"))
+        Some(image_assets.player_right.clone())
     } else if keyboard_input.pressed(KeyCode::Up) {
-        Some(asset_server.load("player_up.png"))
+        Some(image_assets.player_up.clone())
     } else if keyboard_input.pressed(KeyCode::Down) {
-        Some(asset_server.load("player_down.png"))
+        Some(image_assets.player_down.clone())
     } else {
         // Don't change sprite if no input.
         None

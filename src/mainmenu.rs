@@ -1,3 +1,5 @@
+use crate::{FontAssets, ImageAssets};
+
 use super::{despawn_screen, GameState, TEXT_COLOR};
 use bevy::{prelude::*, window::WindowMode};
 
@@ -56,8 +58,11 @@ enum MenuButtonAction {
 #[derive(Component)]
 struct OnMainMenuScreen;
 
-fn main_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
+fn main_menu_setup(
+    mut commands: Commands,
+    image_assets: Res<ImageAssets>,
+    font_assets: Res<FontAssets>,
+) {
     // Common style for all buttons on the screen
     let button_style = Style {
         size: Size::new(Val::Px(250.0), Val::Px(65.0)),
@@ -81,13 +86,11 @@ fn main_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // };
     let button_text_style = TextStyle {
         // font: Default::default(),
-        font: font.clone(),
+        font: font_assets.font.clone(),
         font_size: 40.0,
         color: TEXT_COLOR,
     };
 
-    // Main menu image
-    let overworld_image = asset_server.load("main_menu.png");
     // Button panel
     commands
         .spawn_bundle(NodeBundle {
@@ -100,7 +103,7 @@ fn main_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 size: Size::new(Val::Percent(100.), Val::Percent(100.)),
                 ..default()
             },
-            image: overworld_image.into(),
+            image: image_assets.main_menu.clone().into(),
             ..default()
         })
         .insert(OnMainMenuScreen)

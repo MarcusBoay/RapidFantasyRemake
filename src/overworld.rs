@@ -1,0 +1,127 @@
+
+use super::{GameState, BACKGROUND_SIZE};
+use bevy::{math::const_vec2, prelude::*};
+
+const TIME_STEP: f32 = 1.0 / 60.0;
+
+const PLAYER_SPEED: f32 = 640.0;
+const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
+const PLAYER_SPRINT: f32 = 1.5;
+
+pub struct RapidFantasyPlugin;
+
+impl Plugin for RapidFantasyPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(setup))
+            .add_system_set(
+                SystemSet::on_update(GameState::Overworld)
+                    .with_system(move_player)
+                    .with_system(change_player_image),
+            );
+    }
+}
+
+// Tag component used to tag entities added on the game screen
+#[derive(Component)]
+struct OnGameScreen;
+
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // FIXME: images take some time to load...
+    // Overworld
+    let overworld_image = asset_server.load("bckimg1.png");
+    commands
+        .spawn()
+        .insert(Overworld)
+        .insert_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(0., 0., 0.),
+                ..default()
+            },
+            texture: overworld_image,
+            sprite: Sprite {
+                custom_size: Some(BACKGROUND_SIZE),
+                ..default()
+            },
+            ..default()
+        });
+
+    // Player
+    let player_image = asset_server.load("player_down.png");
+    commands.spawn().insert(Player).insert_bundle(SpriteBundle {
+        transform: Transform {
+            translation: Vec3::new(0., 50., 100.),
+            ..default()
+        },
+        texture: player_image,
+        sprite: Sprite {
+            custom_size: Some(PLAYER_SIZE),
+            ..default()
+        },
+        ..default()
+    });
+}
+
+#[derive(Component)]
+struct Overworld;
+
+#[derive(Component)]
+struct Player;
+
+fn move_player(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<&mut Transform, With<Player>>,
+) {
+    let mut player_transform = query.single_mut();
+    let mut direction_horizontal = 0.0;
+    let mut direction_vertical = 0.0;
+
+    // Only mono-directional movement allowed.
+    if keyboard_input.pressed(KeyCode::Left) {
+        direction_horizontal -= 1.0;
+    } else if keyboard_input.pressed(KeyCode::Right) {
+        direction_horizontal += 1.0;
+    } else if keyboard_input.pressed(KeyCode::Up) {
+        direction_vertical += 1.0;
+    } else if keyboard_input.pressed(KeyCode::Down) {
+        direction_vertical -= 1.0;
+    }
+
+    // Sprinting.
+    if keyboard_input.pressed(KeyCode::LShift) {
+        direction_horizontal *= PLAYER_SPRINT;
+        direction_vertical *= PLAYER_SPRINT;
+    }
+
+    let new_player_position_x =
+        player_transform.translation.x + direction_horizontal * PLAYER_SPEED * TIME_STEP;
+    let new_player_position_y =
+        player_transform.translation.y + direction_vertical * PLAYER_SPEED * TIME_STEP;
+
+    // TODO: clamp within map area
+    player_transform.translation.x = new_player_position_x;
+    player_transform.translation.y = new_player_position_y;
+}
+
+fn change_player_image(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<&mut Handle<Image>, With<Player>>,
+    asset_server: Res<AssetServer>,
+) {
+    let mut player_image = query.single_mut();
+    let new_player_image = if keyboard_input.pressed(KeyCode::Left) {
+        Some(asset_server.load("player_left.png"))
+    } else if keyboard_input.pressed(KeyCode::Right) {
+        Some(asset_server.load("player_right.png"))
+    } else if keyboard_input.pressed(KeyCode::Up) {
+        Some(asset_server.load("player_up.png"))
+    } else if keyboard_input.pressed(KeyCode::Down) {
+        Some(asset_server.load("player_down.png"))
+    } else {
+        // Don't change sprite if no input.
+        None
+    };
+
+    if let Some(new_player_image) = new_player_image {
+        *player_image = new_player_image;
+    }
+}

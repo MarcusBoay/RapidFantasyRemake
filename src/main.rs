@@ -1,122 +1,330 @@
-use bevy::{math::const_vec2, prelude::*};
+use bevy::{math::const_vec2, prelude::*, window::PresentMode};
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum GameState {
+    MainMenu,
     Overworld,
+    Menu,
+    Battle,
+    Lose,
+    FinalVictory,
     Exit,
 }
 
-const TIME_STEP: f32 = 1.0 / 60.0;
-
-// TODO: replace with map image
-const TEMP_BACKGROUND_COLOR: Color = Color::WHITE;
-
-// TODO: player should move 64 units per second.
-const PLAYER_SPEED: f32 = 640.0;
-const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
-const PLAYER_SPRINT: f32 = 1.5;
+const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
 
 fn main() {
     App::new()
+        .insert_resource(WindowDescriptor {
+            title: "Rapid Fantasy - Remake".to_string(),
+            width: 1280.0, // FIXME: this is causing the window to be fullscreen...
+            height: 720.0,
+            present_mode: PresentMode::Fifo,
+            ..default()
+        })
         .add_plugins(DefaultPlugins)
-        .add_plugin(RapidFantasyPlugin)
+        .add_state(GameState::MainMenu)
+        .add_plugin(mainmenu::MainMenuPlugin)
+        .add_plugin(game::RapidFantasyPlugin)
         .run();
 }
 
-pub struct RapidFantasyPlugin;
+mod mainmenu {
+    use super::{GameState, TEXT_COLOR, despawn_screen};
+    use bevy::{prelude::*, window::WindowMode};
 
-impl Plugin for RapidFantasyPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system(setup)
-            .add_system_set(
-                SystemSet::new()
-                    .with_system(move_player)
-                    .with_system(change_player_image)
-            )
-            // .add_system(move_player);
+    pub struct MainMenuPlugin;
+
+    impl Plugin for MainMenuPlugin {
+        fn build(&self, app: &mut App) {
+            // TODO: add main menu state
+            app.add_state(MenuState::Disabled)
+                .add_system_set(SystemSet::on_enter(GameState::MainMenu).with_system(main_menu_state_setup))
+                .add_system_set(
+                    SystemSet::on_enter(MenuState::Main).with_system(main_menu_setup),
+                )
+                .add_system_set(SystemSet::on_update(GameState::MainMenu).with_system(menu_action))
+                // .add_system_set(SystemSet::on_exit())
+                .add_system(change_window_settings) // TODO: settings screen..
+                // When exiting the state, despawn everything that was spawned for this screen
+                .add_system_set(
+                    SystemSet::on_exit(GameState::MainMenu)
+                        .with_system(despawn_screen::<OnMainMenuScreen>),
+                );
             ;
+        }
     }
-}
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // Cameras
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(UiCameraBundle::default());
+    // State used for the current menu screen
+    #[derive(Clone, Eq, PartialEq, Debug, Hash)]
+    enum MenuState {
+        // TODO: to use...
+        Main,
+        Settings, // TODO
+        Disabled,
+    }
 
-    // Player
-    let player_image = asset_server.load("player_down.png");
-    commands.spawn().insert(Player).insert_bundle(SpriteBundle {
-        transform: Transform {
-            translation: Vec3::new(0.0, 50.0, 0.0),
+    const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+    const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+    const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
+    const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+
+    // All actions that can be triggered from a button click
+    #[derive(Component)]
+    enum MenuButtonAction {
+        Play,
+        Settings,
+        SettingsDisplay,
+        SettingsSound,
+        BackToMainMenu,
+        BackToSettings,
+        Quit,
+    }
+
+    // Tag component used to tag entities added on the main menu screen
+    #[derive(Component)]
+    struct OnMainMenuScreen;
+
+    fn main_menu_state_setup(mut menu_state: ResMut<State<MenuState>>) {
+        let _ = menu_state.set(MenuState::Main);
+    }
+
+    fn main_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+        // Common style for all buttons on the screen
+        let button_style = Style {
+            size: Size::new(Val::Px(250.0), Val::Px(65.0)),
+            margin: Rect::all(Val::Px(20.0)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
             ..default()
-        },
-        texture: player_image,
-        sprite: Sprite {
-            custom_size: Some(PLAYER_SIZE),
+        };
+        // let button_icon_style = Style {
+        //     size: Size::new(Val::Px(30.0), Val::Auto),
+        //     // This takes the icons out of the flexbox flow, to be positionned exactly
+        //     position_type: PositionType::Absolute,
+        //     // The icon will be close to the left border of the button
+        //     position: Rect {
+        //         left: Val::Px(10.0),
+        //         right: Val::Auto,
+        //         top: Val::Auto,
+        //         bottom: Val::Auto,
+        //     },
+        //     ..default()
+        // };
+        let button_text_style = TextStyle {
+            font: Default::default(),
+            font_size: 40.0,
+            color: TEXT_COLOR,
+        };
+
+        commands
+            .spawn_bundle(NodeBundle {
+                style: Style {
+                    margin: Rect::all(Val::Auto),
+                    flex_direction: FlexDirection::ColumnReverse,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                color: Color::WHITE.into(),
+                ..default()
+            })
+            .insert(OnMainMenuScreen)
+            .with_children(|parent| {
+                // Display start game button
+                parent
+                    .spawn_bundle(ButtonBundle {
+                        style: button_style.clone(),
+                        color: NORMAL_BUTTON.into(),
+                        ..default()
+                    })
+                    .insert(MenuButtonAction::Play)
+                    .with_children(|parent| {
+                        parent.spawn_bundle(TextBundle {
+                            text: Text::with_section(
+                                "Start Game",
+                                button_text_style.clone(),
+                                Default::default(),
+                            ),
+                            ..default()
+                        });
+                    });
+
+                // TODO: settings button
+            });
+    }
+
+    fn menu_action(
+        interaction_query: Query<
+            (&Interaction, &MenuButtonAction),
+            (Changed<Interaction>, With<Button>),
+        >,
+        mut game_state: ResMut<State<GameState>>,
+    ) {
+        for (interaction, menu_button_action) in interaction_query.iter() {
+            if *interaction == Interaction::Clicked {
+                match menu_button_action {
+                    MenuButtonAction::Play => {
+                        game_state.set(GameState::Overworld).unwrap();
+                    }
+                    _ => unimplemented!("Unhandled menu button action!!"), // TODO
+                }
+            }
+        }
+    }
+
+    fn change_window_settings(input: Res<Input<KeyCode>>, mut windows: ResMut<Windows>) {
+        let window = windows.primary_mut();
+        if input.just_pressed(KeyCode::O) {
+            // TODO
+            if window.mode() == WindowMode::Windowed {
+                window.set_mode(WindowMode::Fullscreen);
+            } else {
+                window.set_mode(WindowMode::Windowed);
+            }
+        }
+    }
+}
+
+mod game {
+    use super::GameState;
+    use bevy::{math::const_vec2, prelude::*};
+
+    const TIME_STEP: f32 = 1.0 / 60.0;
+
+    const BACKGROUND_COLOR: Color = Color::BLACK;
+    const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
+
+    const PLAYER_SPEED: f32 = 640.0;
+    const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
+    const PLAYER_SPRINT: f32 = 1.5;
+
+    pub struct RapidFantasyPlugin;
+
+    impl Plugin for RapidFantasyPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(setup))
+                // .insert_resource(ClearColor(BACKGROUND_COLOR))
+                .add_system_set(
+                    SystemSet::on_update(GameState::Overworld)
+                        .with_system(move_player)
+                        .with_system(change_player_image),
+                );
+        }
+    }
+
+    // Tag component used to tag entities added on the game screen
+    #[derive(Component)]
+    struct OnGameScreen;
+
+    fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+        // Cameras
+        commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+        commands.spawn_bundle(UiCameraBundle::default());
+
+        // FIXME: images take some time to load...
+        // Overworld
+        let overworld_image = asset_server.load("bckimg1.png");
+        commands
+            .spawn()
+            .insert(Overworld)
+            .insert_bundle(SpriteBundle {
+                transform: Transform {
+                    translation: Vec3::new(0., 0., 0.),
+                    ..default()
+                },
+                texture: overworld_image,
+                sprite: Sprite {
+                    custom_size: Some(BACKGROUND_SIZE),
+                    ..default()
+                },
+                ..default()
+            });
+
+        // Player
+        let player_image = asset_server.load("player_down.png");
+        commands.spawn().insert(Player).insert_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(0., 50., 100.),
+                ..default()
+            },
+            texture: player_image,
+            sprite: Sprite {
+                custom_size: Some(PLAYER_SIZE),
+                ..default()
+            },
             ..default()
-        },
-        ..default()
-    });
-}
-
-#[derive(Component)]
-struct Player;
-
-fn move_player(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<Player>>,
-) {
-    let mut player_transform = query.single_mut();
-    let mut direction_horizontal = 0.0;
-    let mut direction_vertical = 0.0;
-
-    // Only mono-directional movement allowed.
-    if keyboard_input.pressed(KeyCode::Left) {
-        direction_horizontal -= 1.0;
-    } else if keyboard_input.pressed(KeyCode::Right) {
-        direction_horizontal += 1.0;
-    } else if keyboard_input.pressed(KeyCode::Up) {
-        direction_vertical += 1.0;
-    } else if keyboard_input.pressed(KeyCode::Down) {
-        direction_vertical -= 1.0;
+        });
     }
 
-    // Sprinting.
-    if keyboard_input.pressed(KeyCode::LShift) {
-        direction_horizontal *= PLAYER_SPRINT;
-        direction_vertical *= PLAYER_SPRINT;
+    #[derive(Component)]
+    struct Overworld;
+
+    #[derive(Component)]
+    struct Player;
+
+    fn move_player(
+        keyboard_input: Res<Input<KeyCode>>,
+        mut query: Query<&mut Transform, With<Player>>,
+    ) {
+        let mut player_transform = query.single_mut();
+        let mut direction_horizontal = 0.0;
+        let mut direction_vertical = 0.0;
+
+        // Only mono-directional movement allowed.
+        if keyboard_input.pressed(KeyCode::Left) {
+            direction_horizontal -= 1.0;
+        } else if keyboard_input.pressed(KeyCode::Right) {
+            direction_horizontal += 1.0;
+        } else if keyboard_input.pressed(KeyCode::Up) {
+            direction_vertical += 1.0;
+        } else if keyboard_input.pressed(KeyCode::Down) {
+            direction_vertical -= 1.0;
+        }
+
+        // Sprinting.
+        if keyboard_input.pressed(KeyCode::LShift) {
+            direction_horizontal *= PLAYER_SPRINT;
+            direction_vertical *= PLAYER_SPRINT;
+        }
+
+        let new_player_position_x =
+            player_transform.translation.x + direction_horizontal * PLAYER_SPEED * TIME_STEP;
+        let new_player_position_y =
+            player_transform.translation.y + direction_vertical * PLAYER_SPEED * TIME_STEP;
+
+        // TODO: clamp within map area
+        player_transform.translation.x = new_player_position_x;
+        player_transform.translation.y = new_player_position_y;
     }
 
-    let new_player_position_x =
-        player_transform.translation.x + direction_horizontal * PLAYER_SPEED * TIME_STEP;
-    let new_player_position_y =
-        player_transform.translation.y + direction_vertical * PLAYER_SPEED * TIME_STEP;
+    fn change_player_image(
+        keyboard_input: Res<Input<KeyCode>>,
+        mut query: Query<&mut Handle<Image>, With<Player>>,
+        asset_server: Res<AssetServer>,
+    ) {
+        let mut player_image = query.single_mut();
+        let new_player_image = if keyboard_input.pressed(KeyCode::Left) {
+            Some(asset_server.load("player_left.png"))
+        } else if keyboard_input.pressed(KeyCode::Right) {
+            Some(asset_server.load("player_right.png"))
+        } else if keyboard_input.pressed(KeyCode::Up) {
+            Some(asset_server.load("player_up.png"))
+        } else if keyboard_input.pressed(KeyCode::Down) {
+            Some(asset_server.load("player_down.png"))
+        } else {
+            // Don't change sprite if no input.
+            None
+        };
 
-    // TODO: clamp within map area
-    player_transform.translation.x = new_player_position_x;
-    player_transform.translation.y = new_player_position_y;
+        if let Some(new_player_image) = new_player_image {
+            *player_image = new_player_image;
+        }
+    }
 }
 
-fn change_player_image(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Handle<Image>, With<Player>>,
-    asset_server: Res<AssetServer>,
-) {
-    let mut player_image = query.single_mut();
-    let new_player_image = if keyboard_input.pressed(KeyCode::Left) {
-        Some(asset_server.load("player_left.png"))
-    } else if keyboard_input.pressed(KeyCode::Right) {
-        Some(asset_server.load("player_right.png"))
-    } else if keyboard_input.pressed(KeyCode::Up) {
-        Some(asset_server.load("player_up.png"))
-    } else if keyboard_input.pressed(KeyCode::Down) {
-        Some(asset_server.load("player_down.png"))
-    } else {
-        // Don't change sprite if no input.
-        None
-    };
-
-    if let Some(new_player_image) = new_player_image {
-        *player_image = new_player_image;
+// Generic system that takes a component as a parameter, and will despawn all entities with that component
+fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
+    for entity in to_despawn.iter() {
+        commands.entity(entity).despawn_recursive();
     }
 }

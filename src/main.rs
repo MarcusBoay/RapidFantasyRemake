@@ -86,9 +86,34 @@ struct Player;
 
 #[derive(Component)]
 struct Stats {
+    hp_max: i32,
+    mp_max: i32,
     hp: i32,
     mp: i32,
-    attack: i32, // TODO: change to str, wisdom, ...
+    strength: i32,
+    wisdom: i32,
+    defense: i32,
+    level: i32,
+    experience: i32
+}
+
+#[derive(Component)]
+struct LimitBreak(i32);
+
+impl Stats {
+    fn new() -> Self {
+        Stats {
+            hp_max: 50,
+            mp_max: 50,
+            hp: 50,
+            mp: 50,
+            strength: 12,
+            wisdom: 12,
+            defense: 5,
+            level: 1,
+            experience: 0
+        }
+    }
 }
 
 fn setup_main(mut commands: Commands) {
@@ -98,9 +123,12 @@ fn setup_main(mut commands: Commands) {
 
     // TODO: Player stats
     commands.spawn().insert(Player).insert(Stats {
-        hp: 2000,
+        hp: 1578,
+        hp_max: 2000,
         mp: 1234,
-        attack: 333,
+        mp_max: 1234,
+        strength: 333,
+        ..Stats::new()
     });
 }
 

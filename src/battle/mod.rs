@@ -69,6 +69,12 @@ pub enum PlayerButtonAction {
 struct PlayerActionContainer;
 
 #[derive(Component)]
+struct HealthText;
+
+#[derive(Component)]
+struct HealthBar;
+
+#[derive(Component)]
 struct Announcement;
 
 #[derive(Component)]
@@ -83,15 +89,21 @@ fn battle_setup(
     mut commands: Commands,
     image_assets: Res<ImageAssets>,
     font_assets: Res<FontAssets>,
+    player_stats: Query<&Stats, With<Player>>,
 ) {
+    let player_stats = player_stats.single();
+    let hp_perc = player_stats.hp as f32 / player_stats.hp_max as f32 * 100.;
+    let mp_perc = player_stats.mp as f32 / player_stats.mp_max as f32 * 100.;
+
     // This will set BattleState::Initialization to BattleState::Idle in 1 second.
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
 
     // TODO: use actual enemy stats
     commands.spawn().insert(Enemy).insert(Stats {
-        hp: 500,
+        hp: 1000,
         mp: 234,
-        attack: 531,
+        strength: 531,
+        ..Stats::new()
     });
 
     commands
@@ -104,19 +116,21 @@ fn battle_setup(
                         .with_children(|p| {
                             p.spawn_bundle(styled_player_stats_child_container())
                                 .with_children(|p| {
-                                    p.spawn_bundle(styled_player_hp_text(&font_assets));
+                                    p.spawn_bundle(styled_player_hp_text(&font_assets, player_stats.hp, player_stats.hp_max))
+                                        .insert(HealthText);
                                     p.spawn_bundle(styled_player_hp_bar_container())
                                         .with_children(|p| {
-                                            p.spawn_bundle(styled_player_hp_bar());
+                                            p.spawn_bundle(styled_player_hp_bar(hp_perc))
+                                                .insert(HealthBar);
                                         });
                                 });
 
                             p.spawn_bundle(styled_player_stats_child_container())
                                 .with_children(|p| {
-                                    p.spawn_bundle(styled_player_mp_text(&font_assets));
+                                    p.spawn_bundle(styled_player_mp_text(&font_assets, player_stats.mp, player_stats.mp_max));
                                     p.spawn_bundle(styled_player_mp_bar_container())
                                         .with_children(|p| {
-                                            p.spawn_bundle(styled_player_mp_bar());
+                                            p.spawn_bundle(styled_player_mp_bar(mp_perc));
                                         });
                                 });
 
@@ -203,27 +217,69 @@ fn battle_action(
 
 fn player_attack_setup(
     mut commands: Commands,
-    mut query: Query<&mut Text, With<Announcement>>,
-    player_stats: Query<&Stats, With<Player>>,
+    mut set: ParamSet<(
+        Query<&Stats, With<Player>>,
+        Query<&mut Stats, With<Enemy>>,
+        Query<&mut Text, With<Announcement>>,
+    )>
 ) {
-    let mut announcement_text = query.single_mut();
-    let player_stats = player_stats.single();
+    // TODO: update player MP if needed...
+    // TODO: calculate damage
+    let mut damage = 0;
+    for player_stats in set.p0().iter() {
+        damage = player_stats.strength;
+    }
 
-    announcement_text.sections[0].value =
-        format!("You did {} damage to the enemy!", player_stats.attack);
+    for mut enemy_stats in set.p1().iter_mut() {
+        enemy_stats.hp -= damage;
+    }
+
+    for mut announcement_text in set.p2().iter_mut() {
+        announcement_text.sections[0].value =
+            format!("You did {} damage to the enemy!", damage);
+    }
 
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
 }
 
 fn enemy_attack_setup(
     mut commands: Commands,
-    mut query: Query<&mut Text, With<Announcement>>,
-    enemy_stats: Query<&Stats, With<Enemy>>,
+    mut set: ParamSet<(
+        Query<&mut Stats, With<Player>>,
+        Query<&Stats, With<Enemy>>,
+        Query<&mut Text, With<Announcement>>,
+        Query<&mut Text, With<HealthText>>,
+        Query<&mut Style, With<HealthBar>>,
+    )>
 ) {
-    let mut announcement_text = query.single_mut();
-    let enemy_stats = enemy_stats.single();
+    // TODO: calculate damage
+    let mut damage = 0;
+    for enemy_stats in set.p1().iter() {
+        damage = enemy_stats.strength;
+    }
+    
+    let mut player_hp = 0;
+    let mut player_max_hp = 0;
+    for mut player_stats in set.p0().iter_mut() {
+        player_stats.hp -= damage;
+        player_hp = player_stats.hp;
+        player_max_hp = player_stats.hp_max;
+    }
 
-    announcement_text.sections[0].value = format!("They did {} damage to you!", enemy_stats.attack);
+    for mut announcement_text in set.p2().iter_mut() {
+        announcement_text.sections[0].value =
+            format!("They did {} damage to you!", damage);
+    }
+
+    // TODO: put these into another system with Changed<> query filter... maybe
+    for mut health_text in set.p3().iter_mut() {
+        health_text.sections[1].value = format!("{} / {}", player_hp, player_max_hp);
+    }
+
+    let player_hp_perc = player_hp as f32 / player_max_hp as f32 * 100.;
+    for mut health_bar in set.p4().iter_mut() {
+        health_bar.size = Size::new(Val::Percent(player_hp_perc), Val::Percent(100.));
+    }
 
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
 }

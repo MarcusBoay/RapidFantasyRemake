@@ -60,7 +60,7 @@ pub fn styled_player_stats_child_container() -> NodeBundle {
     }
 }
 
-pub fn styled_player_hp_text(font_assets: &Res<FontAssets>) -> TextBundle {
+pub fn styled_player_hp_text(font_assets: &Res<FontAssets>, hp: i32, hp_max: i32) -> TextBundle {
     TextBundle {
         text: Text {
             sections: vec![
@@ -69,7 +69,7 @@ pub fn styled_player_hp_text(font_assets: &Res<FontAssets>) -> TextBundle {
                     style: common_text_style(font_assets),
                 },
                 TextSection {
-                    value: "1234 / 4321".to_string(), // TODO: use actual value,
+                    value: format!("{} / {}", hp, hp_max),
                     style: common_text_style(font_assets),
                 },
             ],
@@ -90,10 +90,10 @@ pub fn styled_player_hp_bar_container() -> NodeBundle {
     }
 }
 
-pub fn styled_player_hp_bar() -> NodeBundle {
+pub fn styled_player_hp_bar(hp_perc: f32) -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(80.), Val::Percent(100.)), // TODO: update width
+            size: Size::new(Val::Percent(hp_perc), Val::Percent(100.)), // TODO: update width
             ..default()
         },
         color: Color::LIME_GREEN.into(), // TODO: update to RED / YELLOW based on HP percentage
@@ -101,7 +101,7 @@ pub fn styled_player_hp_bar() -> NodeBundle {
     }
 }
 
-pub fn styled_player_mp_text(font_assets: &Res<FontAssets>) -> TextBundle {
+pub fn styled_player_mp_text(font_assets: &Res<FontAssets>, mp: i32, mp_max: i32) -> TextBundle {
     TextBundle {
         text: Text {
             sections: vec![
@@ -110,7 +110,7 @@ pub fn styled_player_mp_text(font_assets: &Res<FontAssets>) -> TextBundle {
                     style: common_text_style(font_assets),
                 },
                 TextSection {
-                    value: "777 / 999".to_string(), // TODO: use actual value,
+                    value: format!("{} / {}", mp, mp_max),
                     style: common_text_style(font_assets),
                 },
             ],
@@ -131,10 +131,10 @@ pub fn styled_player_mp_bar_container() -> NodeBundle {
     }
 }
 
-pub fn styled_player_mp_bar() -> NodeBundle {
+pub fn styled_player_mp_bar(mp_perc: f32) -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(80.), Val::Percent(100.)), // TODO: update width
+            size: Size::new(Val::Percent(mp_perc), Val::Percent(100.)), // TODO: update width
             ..default()
         },
         color: Color::BLUE.into(),
@@ -183,6 +183,9 @@ pub fn styled_player_action_container() -> NodeBundle {
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
+        visibility: Visibility {
+            is_visible: false
+        },
         ..default()
     }
 }
@@ -195,6 +198,9 @@ pub fn styled_player_action_button() -> ButtonBundle {
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
+        },
+        visibility: Visibility {
+            is_visible: false
         },
         color: NORMAL_BUTTON.into(),
         ..default()
@@ -215,6 +221,9 @@ pub fn styled_player_action_button_text(
             },
             Default::default(),
         ),
+        visibility: Visibility {
+            is_visible: false
+        },
         ..default()
     }
 }

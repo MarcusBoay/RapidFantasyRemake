@@ -1,4 +1,4 @@
-use crate::{despawn_screen, ImageAssets, Player};
+use crate::{despawn_screen, Enemy, EnemyTable, ImageAssets, Player, Stats};
 
 use super::{GameState, BACKGROUND_SIZE};
 use bevy::{math::const_vec2, prelude::*};
@@ -34,9 +34,7 @@ struct OverworldScreen;
 fn overworld_setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
     // Overworld
     commands
-        .spawn() // maybe replace with spawn_bundle?
-        .insert(OverworldScreen)
-        .insert_bundle(SpriteBundle {
+        .spawn_bundle(SpriteBundle {
             transform: Transform {
                 translation: Vec3::new(0., 0., 0.),
                 ..default()
@@ -47,21 +45,30 @@ fn overworld_setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
                 ..default()
             },
             ..default()
-        });
+        })
+        .insert(OverworldScreen);
+
+    // Enemies
+    commands.init_resource::<EnemyTable>();
 
     // Player
-    commands.spawn().insert(Player).insert_bundle(SpriteBundle {
-        transform: Transform {
-            translation: Vec3::new(0., 50., 100.), // TODO: use player's last known coords
+    commands
+        .spawn_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(0., 50., 100.), // TODO: use player's last known coords
+                ..default()
+            },
+            texture: image_assets.player_down.clone(),
+            sprite: Sprite {
+                custom_size: Some(PLAYER_SIZE),
+                ..default()
+            },
             ..default()
-        },
-        texture: image_assets.player_down.clone(),
-        sprite: Sprite {
-            custom_size: Some(PLAYER_SIZE),
-            ..default()
-        },
-        ..default()
-    });
+        })
+        .insert(Player)
+        .insert(Stats {
+            ..Stats::new(image_assets.player_battle.clone())
+        });
 }
 
 fn move_player(
@@ -125,10 +132,21 @@ fn change_player_image(
 
 // TODO: change to random chance to spawn
 // TODO: spawn final boss monster during interaction
-fn spawn_monster(keyboard_input: Res<Input<KeyCode>>, mut game_state: ResMut<State<GameState>>) {
+fn spawn_monster(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut game_state: ResMut<State<GameState>>,
+    mut commands: Commands,
+    enemy_table: Res<EnemyTable>,
+) {
     if keyboard_input.just_pressed(KeyCode::P) {
         // TODO: random chance
-        // change state to battle
+        let enemy_stats = enemy_table.table.get(&0).unwrap().0.clone();
+        let stats = enemy_table.table.get(&0).unwrap().1.clone();
+        commands
+            .spawn()
+            .insert(Enemy)
+            .insert(enemy_stats)
+            .insert(stats);
         game_state.set(GameState::Battle).unwrap();
     }
 }

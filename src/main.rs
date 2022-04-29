@@ -1,13 +1,13 @@
 mod battle;
 mod mainmenu; // why does this work?????
 mod overworld;
-use bevy::{math::const_vec2, prelude::*, window::PresentMode};
+use bevy::{math::const_vec2, prelude::*, utils::HashMap, window::PresentMode};
 use bevy_asset_loader::{AssetCollection, AssetLoader};
 
 fn main() {
     let mut app = App::new();
     AssetLoader::new(GameState::Initialization)
-        .continue_to_state(GameState::Battle) // TODO: change back to MainMenu after done testing
+        .continue_to_state(GameState::MainMenu) // TODO: change back to MainMenu after done testing
         .with_collection::<ImageAssets>()
         .with_collection::<FontAssets>()
         .build(&mut app);
@@ -84,7 +84,7 @@ pub struct FontAssets {
 #[derive(Component)]
 struct Player;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 struct Stats {
     hp_max: i32,
     mp_max: i32,
@@ -94,14 +94,13 @@ struct Stats {
     wisdom: i32,
     defense: i32,
     level: i32,
-    experience: i32
+    experience: i32,
+    gold: i32,
+    battle_sprite: Handle<Image>,
 }
 
-#[derive(Component)]
-struct LimitBreak(i32);
-
 impl Stats {
-    fn new() -> Self {
+    fn new(battle_sprite: Handle<Image>) -> Self {
         Stats {
             hp_max: 50,
             mp_max: 50,
@@ -111,8 +110,76 @@ impl Stats {
             wisdom: 12,
             defense: 5,
             level: 1,
-            experience: 0
+            experience: 0,
+            gold: 0,
+            battle_sprite,
         }
+    }
+}
+
+#[derive(Component)]
+struct LimitBreak(i32);
+
+#[derive(Component, Clone)]
+struct EnemyStats {
+    id: usize,
+    name: String,
+    description: String,
+    element: Element,
+    next_phase: Option<usize>, // id? maybe another enemystats?
+} // TODO: implement enemy table
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+enum Element {
+    None,
+    Fire,
+    Earth,
+    Electric,
+    Water,
+    Light,
+    Dark,
+} // TODO: implement damage lookup table
+
+#[derive(Component)]
+struct Enemy;
+
+struct EnemyTable {
+    pub table: HashMap<usize, (EnemyStats, Stats)>,
+}
+
+impl FromWorld for EnemyTable {
+    fn from_world(world: &mut World) -> Self {
+        let image_assets = world.get_resource_mut::<ImageAssets>().unwrap();
+        let mut enemies = HashMap::new();
+        enemies.insert(
+            0,
+            (
+                EnemyStats {
+                    id: 0,
+                    name: "Slime".to_string(),
+                    description: "I wonder if it\'s edible?".to_string(),
+                    element: Element::None,
+                    next_phase: None,
+                },
+                Stats {
+                    hp_max: 39,
+                    hp: 39,
+                    mp_max: 10,
+                    mp: 10,
+                    strength: 8,
+                    wisdom: 8,
+                    defense: 8,
+                    level: 1,
+                    experience: 180,
+                    gold: 50,
+                    battle_sprite: image_assets.enemy1.clone(),
+                },
+            ),
+        );
+        // TODO: add more enemies
+        // TODO: maybe put this into another file...
+
+        EnemyTable { table: enemies }
     }
 }
 
@@ -120,16 +187,6 @@ fn setup_main(mut commands: Commands) {
     // Cameras
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     commands.spawn_bundle(UiCameraBundle::default());
-
-    // TODO: Player stats
-    commands.spawn().insert(Player).insert(Stats {
-        hp: 1578,
-        hp_max: 2000,
-        mp: 1234,
-        mp_max: 1234,
-        strength: 333,
-        ..Stats::new()
-    });
 }
 
 // This system handles changing all buttons color based on mouse interaction

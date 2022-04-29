@@ -1,5 +1,6 @@
 use crate::{
-    button_system, despawn_screen, set_visible_recursive, FontAssets, ImageAssets, Player, Stats,
+    button_system, despawn_screen, set_visible_recursive, Enemy, EnemyStats, FontAssets,
+    Player, Stats,
 };
 
 mod styles;
@@ -77,34 +78,46 @@ struct HealthBar;
 #[derive(Component)]
 struct Announcement;
 
-#[derive(Component)]
-struct Enemy;
-
-#[derive(Component)]
-struct EnemySprite; // TODO: when we need to change boss sprite due to phases
-
 const TEXT_DURATION: f32 = 1.5;
 
 fn battle_setup(
     mut commands: Commands,
-    image_assets: Res<ImageAssets>,
     font_assets: Res<FontAssets>,
-    player_stats: Query<&Stats, With<Player>>,
+    mut stats: ParamSet<(
+        Query<&mut Stats, With<Player>>,
+        Query<&mut Stats, With<Enemy>>,
+        Query<&mut EnemyStats, With<Enemy>>,
+    )>,
 ) {
-    let player_stats = player_stats.single();
-    let hp_perc = player_stats.hp as f32 / player_stats.hp_max as f32 * 100.;
-    let mp_perc = player_stats.mp as f32 / player_stats.mp_max as f32 * 100.;
+    let mut hp = 0;
+    let mut hp_max = 0;
+    let mut mp = 0;
+    let mut mp_max = 0;
+    let mut hp_perc = 0.;
+    let mut mp_perc = 0.;
+    let mut player_sprite = Default::default();
+    for player_stats in stats.p0().iter() {
+        hp = player_stats.hp;
+        hp_max = player_stats.hp_max;
+        mp = player_stats.mp;
+        mp_max = player_stats.mp_max;
+        hp_perc = player_stats.hp as f32 / player_stats.hp_max as f32 * 100.;
+        mp_perc = player_stats.mp as f32 / player_stats.mp_max as f32 * 100.;
+        player_sprite = player_stats.battle_sprite.clone();
+    }
+
+    let mut enemy_sprite = Default::default();
+    for enemy_stats in stats.p1().iter() {
+        enemy_sprite = enemy_stats.battle_sprite.clone();
+    }
+
+    let mut enemy_name = "".to_string();
+    for enemy_stats in stats.p2().iter() {
+        enemy_name = enemy_stats.name.clone();
+    }
 
     // This will set BattleState::Initialization to BattleState::Idle in 1 second.
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
-
-    // TODO: use actual enemy stats
-    commands.spawn().insert(Enemy).insert(Stats {
-        hp: 1000,
-        mp: 234,
-        strength: 531,
-        ..Stats::new()
-    });
 
     commands
         .spawn_bundle(styled_battle_screen())
@@ -116,7 +129,7 @@ fn battle_setup(
                         .with_children(|p| {
                             p.spawn_bundle(styled_player_stats_child_container())
                                 .with_children(|p| {
-                                    p.spawn_bundle(styled_player_hp_text(&font_assets, player_stats.hp, player_stats.hp_max))
+                                    p.spawn_bundle(styled_player_hp_text(&font_assets, hp, hp_max))
                                         .insert(HealthText);
                                     p.spawn_bundle(styled_player_hp_bar_container())
                                         .with_children(|p| {
@@ -127,7 +140,7 @@ fn battle_setup(
 
                             p.spawn_bundle(styled_player_stats_child_container())
                                 .with_children(|p| {
-                                    p.spawn_bundle(styled_player_mp_text(&font_assets, player_stats.mp, player_stats.mp_max));
+                                    p.spawn_bundle(styled_player_mp_text(&font_assets, mp, mp_max));
                                     p.spawn_bundle(styled_player_mp_bar_container())
                                         .with_children(|p| {
                                             p.spawn_bundle(styled_player_mp_bar(mp_perc));
@@ -167,15 +180,14 @@ fn battle_setup(
 
             p.spawn_bundle(styled_announcement_container())
                 .with_children(|p| {
-                    p.spawn_bundle(styled_announcement_text(&font_assets))
+                    p.spawn_bundle(styled_announcement_text(&font_assets, enemy_name))
                         .insert(Announcement);
                 });
 
             p.spawn_bundle(styled_battle_images_container())
                 .with_children(|p| {
-                    p.spawn_bundle(styled_battle_portrait(image_assets.player_battle.clone()));
-                    p.spawn_bundle(styled_battle_portrait(image_assets.enemy1.clone()))
-                        .insert(EnemySprite);
+                    p.spawn_bundle(styled_battle_portrait(player_sprite));
+                    p.spawn_bundle(styled_battle_portrait(enemy_sprite));
                 });
         });
 }
@@ -221,7 +233,7 @@ fn player_attack_setup(
         Query<&Stats, With<Player>>,
         Query<&mut Stats, With<Enemy>>,
         Query<&mut Text, With<Announcement>>,
-    )>
+    )>,
 ) {
     // TODO: update player MP if needed...
     // TODO: calculate damage
@@ -232,11 +244,11 @@ fn player_attack_setup(
 
     for mut enemy_stats in set.p1().iter_mut() {
         enemy_stats.hp -= damage;
+        println!("enemy hp: {}", enemy_stats.hp);
     }
 
     for mut announcement_text in set.p2().iter_mut() {
-        announcement_text.sections[0].value =
-            format!("You did {} damage to the enemy!", damage);
+        announcement_text.sections[0].value = format!("You did {} damage to the enemy!", damage);
     }
 
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
@@ -250,14 +262,14 @@ fn enemy_attack_setup(
         Query<&mut Text, With<Announcement>>,
         Query<&mut Text, With<HealthText>>,
         Query<&mut Style, With<HealthBar>>,
-    )>
+    )>,
 ) {
     // TODO: calculate damage
     let mut damage = 0;
     for enemy_stats in set.p1().iter() {
         damage = enemy_stats.strength;
     }
-    
+
     let mut player_hp = 0;
     let mut player_max_hp = 0;
     for mut player_stats in set.p0().iter_mut() {
@@ -267,8 +279,7 @@ fn enemy_attack_setup(
     }
 
     for mut announcement_text in set.p2().iter_mut() {
-        announcement_text.sections[0].value =
-            format!("They did {} damage to you!", damage);
+        announcement_text.sections[0].value = format!("They did {} damage to you!", damage);
     }
 
     // TODO: put these into another system with Changed<> query filter... maybe

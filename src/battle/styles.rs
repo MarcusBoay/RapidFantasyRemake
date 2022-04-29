@@ -183,9 +183,7 @@ pub fn styled_player_action_container() -> NodeBundle {
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
-        visibility: Visibility {
-            is_visible: false
-        },
+        visibility: Visibility { is_visible: false },
         ..default()
     }
 }
@@ -199,9 +197,7 @@ pub fn styled_player_action_button() -> ButtonBundle {
             align_items: AlignItems::Center,
             ..default()
         },
-        visibility: Visibility {
-            is_visible: false
-        },
+        visibility: Visibility { is_visible: false },
         color: NORMAL_BUTTON.into(),
         ..default()
     }
@@ -221,9 +217,7 @@ pub fn styled_player_action_button_text(
             },
             Default::default(),
         ),
-        visibility: Visibility {
-            is_visible: false
-        },
+        visibility: Visibility { is_visible: false },
         ..default()
     }
 }
@@ -244,10 +238,10 @@ pub fn styled_announcement_container() -> NodeBundle {
     }
 }
 
-pub fn styled_announcement_text(font_assets: &Res<FontAssets>) -> TextBundle {
+pub fn styled_announcement_text(font_assets: &Res<FontAssets>, name: String) -> TextBundle {
     TextBundle {
         text: Text::with_section(
-            "A wild encounter appeared!".to_string(),
+            format!("A wild {} appeared!", name),
             common_text_style(&font_assets),
             Default::default(),
         ),

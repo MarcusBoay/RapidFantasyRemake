@@ -1,4 +1,4 @@
-use crate::{despawn_screen, Enemy, EnemyTable, ImageAssets, Player, Stats};
+use crate::{despawn_screen, Enemy, ImageAssets, Player, Stats, EnemyTable};
 
 use super::{GameState, BACKGROUND_SIZE};
 use bevy::{math::const_vec2, prelude::*};
@@ -139,9 +139,9 @@ fn spawn_monster(
     enemy_table: Res<EnemyTable>,
 ) {
     if keyboard_input.just_pressed(KeyCode::P) {
-        // TODO: random chance
-        let enemy_stats = enemy_table.table.get(&0).unwrap().0.clone();
-        let stats = enemy_table.table.get(&0).unwrap().1.clone();
+        // TODO: random chance, area enemies
+        let enemy_stats = enemy_table.table.get("Slime").unwrap().0.clone();
+        let stats = enemy_table.table.get("Slime").unwrap().1.clone();
         commands
             .spawn()
             .insert(Enemy)

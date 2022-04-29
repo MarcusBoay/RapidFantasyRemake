@@ -1,4 +1,4 @@
-use crate::{FontAssets, ImageAssets};
+use crate::{button_system, FontAssets, ImageAssets, NORMAL_BUTTON};
 
 use super::{despawn_screen, GameState, TEXT_COLOR};
 use bevy::{prelude::*, window::WindowMode};
@@ -32,15 +32,6 @@ enum MenuState {
     Settings, // TODO
     Disabled,
 }
-
-const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
-const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
-
-// Tag component used to mark wich setting is currently selected
-#[derive(Component)]
-struct SelectedOption;
 
 // All actions that can be triggered from a button click
 #[derive(Component)]
@@ -137,23 +128,6 @@ fn main_menu_setup(
 
             // TODO: settings button
         });
-}
-// This system handles changing all buttons color based on mouse interaction
-fn button_system(
-    mut interaction_query: Query<
-        (&Interaction, &mut UiColor, Option<&SelectedOption>),
-        (Changed<Interaction>, With<Button>),
-    >,
-) {
-    for (interaction, mut color, selected) in interaction_query.iter_mut() {
-        *color = match (*interaction, selected) {
-            (Interaction::Clicked, _) => PRESSED_BUTTON.into(),
-            (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON.into(),
-            (Interaction::Hovered, None) => HOVERED_BUTTON.into(),
-            (Interaction::None, Some(_)) => PRESSED_BUTTON.into(),
-            (Interaction::None, None) => NORMAL_BUTTON.into(),
-        }
-    }
 }
 
 fn menu_action(

@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{FontAssets, TEXT_COLOR};
+use crate::{FontAssets, NORMAL_BUTTON, TEXT_COLOR};
+
+use super::PlayerButtonAction;
 
 pub fn common_text_style(font_assets: &Res<FontAssets>) -> TextStyle {
     TextStyle {
@@ -178,9 +180,41 @@ pub fn styled_player_action_container() -> NodeBundle {
         style: Style {
             size: Size::new(Val::Percent(70.), Val::Percent(92.)),
             margin: Rect::all(Val::Percent(1.)),
+            flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
-        color: Color::GRAY.into(),
+        ..default()
+    }
+}
+
+pub fn styled_player_action_button() -> ButtonBundle {
+    ButtonBundle {
+        style: Style {
+            size: Size::new(Val::Px(250.0), Val::Percent(23.0)),
+            margin: Rect::all(Val::Px(1.0)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        color: NORMAL_BUTTON.into(),
+        ..default()
+    }
+}
+
+pub fn styled_player_action_button_text(
+    player_button_action: &PlayerButtonAction,
+    font_assets: &Res<FontAssets>,
+) -> TextBundle {
+    TextBundle {
+        text: Text::with_section(
+            format!("{:?}", player_button_action),
+            TextStyle {
+                font: font_assets.font.clone(),
+                font_size: 40.0,
+                color: TEXT_COLOR,
+            },
+            Default::default(),
+        ),
         ..default()
     }
 }
@@ -219,6 +253,18 @@ pub fn styled_battle_images_container() -> NodeBundle {
             ..default()
         },
         color: Color::WHITE.into(),
+        ..default()
+    }
+}
+
+pub fn styled_battle_portrait(image: Handle<Image>) -> ImageBundle {
+    ImageBundle {
+        style: Style {
+            size: Size::new(Val::Px(256.), Val::Px(256.)),
+            margin: Rect::all(Val::Auto),
+            ..default()
+        },
+        image: UiImage(image),
         ..default()
     }
 }

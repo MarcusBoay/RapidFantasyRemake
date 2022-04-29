@@ -44,21 +44,35 @@ const TEXT_COLOR: Color = Color::BLACK;
 const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
 const BACKGROUND_COLOR: Color = Color::BLACK;
 
+const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
+const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+
+// Tag component used to mark which setting is currently selected
+#[derive(Component)]
+struct SelectedOption;
+
 #[derive(AssetCollection)]
 pub struct ImageAssets {
-    #[asset(path = "main_menu.png")]
+    #[asset(path = "images/main_menu.png")]
     main_menu: Handle<Image>,
-    #[asset(path = "overworld1.png")]
+    #[asset(path = "images/overworld1.png")]
     overworld1: Handle<Image>,
 
-    #[asset(path = "player_up.png")]
+    #[asset(path = "images/player_up.png")]
     player_up: Handle<Image>,
-    #[asset(path = "player_down.png")]
+    #[asset(path = "images/player_down.png")]
     player_down: Handle<Image>,
-    #[asset(path = "player_left.png")]
+    #[asset(path = "images/player_left.png")]
     player_left: Handle<Image>,
-    #[asset(path = "player_right.png")]
+    #[asset(path = "images/player_right.png")]
     player_right: Handle<Image>,
+
+    #[asset(path = "images/player_battle.png")]
+    player_battle: Handle<Image>,
+    #[asset(path = "images/enemy1.png")]
+    enemy1: Handle<Image>,
 }
 
 #[derive(AssetCollection)]
@@ -67,15 +81,69 @@ pub struct FontAssets {
     font: Handle<Font>,
 }
 
+#[derive(Component)]
+struct Player;
+
+#[derive(Component)]
+struct Stats {
+    hp: i32,
+    mp: i32,
+    attack: i32, // TODO: change to str, wisdom, ...
+}
+
 fn setup_main(mut commands: Commands) {
     // Cameras
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     commands.spawn_bundle(UiCameraBundle::default());
+
+    // TODO: Player stats
+    commands.spawn().insert(Player).insert(Stats {
+        hp: 2000,
+        mp: 1234,
+        attack: 333,
+    });
+}
+
+// This system handles changing all buttons color based on mouse interaction
+fn button_system(
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, Option<&SelectedOption>),
+        (Changed<Interaction>, With<Button>),
+    >,
+) {
+    for (interaction, mut color, selected) in interaction_query.iter_mut() {
+        *color = match (*interaction, selected) {
+            (Interaction::Clicked, _) => PRESSED_BUTTON.into(),
+            (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON.into(),
+            (Interaction::Hovered, None) => HOVERED_BUTTON.into(),
+            (Interaction::None, Some(_)) => PRESSED_BUTTON.into(),
+            (Interaction::None, None) => NORMAL_BUTTON.into(),
+        }
+    }
 }
 
 // Generic system that takes a component as a parameter, and will despawn all entities with that component
 fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
     for entity in to_despawn.iter() {
         commands.entity(entity).despawn_recursive();
+    }
+}
+
+// Recursively set the visibility of entities
+// https://github.com/bevyengine/bevy/issues/838#issuecomment-772082427
+fn set_visible_recursive(
+    is_visible: bool,
+    entity: Entity,
+    visible_query: &mut Query<&mut Visibility>,
+    children_query: &Query<&Children>,
+) {
+    if let Ok(mut visible) = visible_query.get_mut(entity) {
+        visible.is_visible = is_visible;
+    }
+
+    if let Ok(children) = children_query.get(entity) {
+        for child in children.iter() {
+            set_visible_recursive(is_visible, *child, visible_query, children_query);
+        }
     }
 }

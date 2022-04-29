@@ -1,4 +1,4 @@
-use crate::{despawn_screen, ImageAssets};
+use crate::{despawn_screen, ImageAssets, Player};
 
 use super::{GameState, BACKGROUND_SIZE};
 use bevy::{math::const_vec2, prelude::*};
@@ -31,13 +31,10 @@ impl Plugin for OverworldPlugin {
 #[derive(Component)]
 struct OverworldScreen;
 
-#[derive(Component)]
-struct Player;
-
 fn overworld_setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
     // Overworld
     commands
-        .spawn()
+        .spawn() // maybe replace with spawn_bundle?
         .insert(OverworldScreen)
         .insert_bundle(SpriteBundle {
             transform: Transform {

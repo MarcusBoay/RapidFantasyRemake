@@ -53,7 +53,13 @@ fn main_menu_setup(
     mut commands: Commands,
     image_assets: Res<ImageAssets>,
     font_assets: Res<FontAssets>,
+    mut menu_state: ResMut<State<MenuState>>,
 ) {
+    // Reset state for recurring visit to this page.
+    if *menu_state.current() == MenuState::Disabled {
+        menu_state.set(MenuState::Main).unwrap();
+    }
+
     // Common style for all buttons on the screen
     let button_style = Style {
         size: Size::new(Val::Px(250.0), Val::Px(65.0)),

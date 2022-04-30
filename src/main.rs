@@ -1,5 +1,6 @@
 mod battle;
 mod enemy_table;
+mod lose;
 mod mainmenu; // why does this work?????
 mod overworld;
 use bevy::{math::const_vec2, prelude::*, utils::HashMap, window::PresentMode};
@@ -28,6 +29,7 @@ fn main() {
     .add_plugin(mainmenu::MainMenuPlugin)
     .add_plugin(overworld::OverworldPlugin)
     .add_plugin(battle::BattlePlugin)
+    .add_plugin(lose::LosePlugin)
     .run();
 }
 
@@ -47,10 +49,10 @@ const TEXT_COLOR: Color = Color::BLACK;
 const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
 const BACKGROUND_COLOR: Color = Color::BLACK;
 
-const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
-const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+const NORMAL_BUTTON: Color = Color::rgb(0.6, 0.6, 0.6);
+const HOVERED_BUTTON: Color = Color::rgb(0.8, 0.8, 0.8);
+const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+const PRESSED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 
 const XP_TABLE: [i32; 5] = [1000, 8000, 27000, 64000, 1];
 
@@ -64,6 +66,9 @@ pub struct ImageAssets {
     main_menu: Handle<Image>,
     #[asset(path = "images/overworld1.png")]
     overworld1: Handle<Image>,
+
+    #[asset(path = "images/game_over.png")]
+    game_over: Handle<Image>,
 
     #[asset(path = "images/player_up.png")]
     player_up: Handle<Image>,

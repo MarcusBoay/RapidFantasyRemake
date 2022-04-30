@@ -4,7 +4,7 @@ mod global;
 mod lose;
 mod mainmenu; // why does this work?????
 mod overworld;
-use bevy::{math::const_vec2, prelude::*, utils::HashMap, window::PresentMode};
+use bevy::{prelude::*, window::PresentMode};
 use bevy_asset_loader::{AssetCollection, AssetLoader};
 
 fn main() {

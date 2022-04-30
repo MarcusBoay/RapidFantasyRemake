@@ -1,8 +1,11 @@
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{global, ImageAssets};
+use crate::{
+    global::{EnemyStats, EnemyTable, Stats},
+    ImageAssets,
+};
 
-impl FromWorld for global::EnemyTable {
+impl FromWorld for EnemyTable {
     fn from_world(world: &mut World) -> Self {
         let image_assets = world.get_resource_mut::<ImageAssets>().unwrap();
         let mut enemies = HashMap::new();
@@ -11,14 +14,14 @@ impl FromWorld for global::EnemyTable {
         enemies.insert(
             name.clone(),
             (
-                global::EnemyStats {
+                EnemyStats {
                     id: enemies.len(),
                     name: name.clone(),
                     description: "I wonder if it\'s edible?".to_string(),
                     element: None,
                     next_phase: None,
                 },
-                global::Stats {
+                Stats {
                     hp_max: 39,
                     hp: 39,
                     mp_max: 10,
@@ -35,6 +38,6 @@ impl FromWorld for global::EnemyTable {
         );
         // TODO: add more enemies
 
-        global::EnemyTable { table: enemies }
+        EnemyTable { table: enemies }
     }
 }

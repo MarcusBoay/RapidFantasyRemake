@@ -1,6 +1,5 @@
 use crate::{
-    button_system, despawn_screen, set_visible_recursive, Enemy, EnemyStats, FontAssets, Player,
-    Stats,
+    button_system, despawn_screen, set_visible_recursive, Enemy, FontAssets, Player, XP_TABLE,
 };
 
 mod styles;
@@ -276,13 +275,35 @@ fn enemy_attack_setup(
 fn win_setup(
     mut commands: Commands,
     mut set: ParamSet<(Query<&mut Text, With<Announcement>>,)>,
+    mut player: ResMut<Player>,
     enemy: Res<Enemy>,
 ) {
+    let mut player = &mut player.stats;
     let enemy_name = enemy.enemy_stats.name.clone();
 
     for mut announcement_text in set.p0().iter_mut() {
         announcement_text.sections[0].value = format!("You defeated {}!", enemy_name);
     }
+
+    // Level up
+    let mut leveled_up = false;
+    player.experience += enemy.stats.experience;
+    if player.level < 5 && player.experience >= XP_TABLE[player.level as usize - 1] {
+        leveled_up = true;
+        player.experience %= XP_TABLE[player.level as usize - 1];
+        player.level += 1;
+
+        player.hp_max += player.level * 50;
+        player.hp = player.hp_max;
+        player.strength += player.level * 5;
+        player.wisdom += player.level * 5;
+        player.mp_max += 40 + player.wisdom * 5;
+        player.mp = player.mp_max;
+    } else if player.level == 5 {
+        player.experience = 1;
+    }
+
+    // TODO: gain loot
 
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
 }

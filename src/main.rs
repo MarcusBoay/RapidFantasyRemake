@@ -52,6 +52,8 @@ const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
+const XP_TABLE: [i32; 5] = [1000, 8000, 27000, 64000, 1];
+
 // Tag component used to mark which setting is currently selected
 #[derive(Component)]
 struct SelectedOption;
@@ -154,14 +156,14 @@ struct Enemy {
     enemy_stats: EnemyStats,
 }
 
+struct EnemyTable {
+    pub table: HashMap<String, (EnemyStats, Stats)>, // TODO: maybe change this to an array?
+}
+
 fn setup_main(mut commands: Commands) {
     // Cameras
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     commands.spawn_bundle(UiCameraBundle::default());
-}
-
-struct EnemyTable {
-    pub table: HashMap<String, (EnemyStats, Stats)>, // TODO: maybe change this to an array?
 }
 
 // This system handles changing all buttons color based on mouse interaction

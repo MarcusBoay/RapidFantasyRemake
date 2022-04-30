@@ -34,7 +34,6 @@ impl FromWorld for EnemyTable {
             ),
         );
         // TODO: add more enemies
-        // TODO: maybe put this into another file...
 
         EnemyTable { table: enemies }
     }

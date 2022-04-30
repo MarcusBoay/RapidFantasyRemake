@@ -89,6 +89,8 @@ pub struct ImageAssets {
 pub struct FontAssets {
     #[asset(path = "fonts/FiraMono-Medium.ttf")]
     font: Handle<Font>,
+    #[asset(path = "fonts/FiraSans-Bold.ttf")]
+    font_bold: Handle<Font>,
 }
 
 #[derive(Default)]

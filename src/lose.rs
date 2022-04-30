@@ -32,21 +32,6 @@ fn lose_setup(
     image_assets: Res<ImageAssets>,
     font_assets: Res<FontAssets>,
 ) {
-    // Common style for all buttons on the screen
-    let button_style = Style {
-        size: Size::new(Val::Px(400.0), Val::Px(65.0)),
-        margin: Rect::all(Val::Px(20.0)),
-        justify_content: JustifyContent::Center,
-        align_items: AlignItems::Center,
-        ..default()
-    };
-    let button_text_style = TextStyle {
-        font: font_assets.font.clone(),
-        font_size: 40.0,
-        color: TEXT_COLOR,
-    };
-
-    // Button panel
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -63,9 +48,34 @@ fn lose_setup(
         })
         .insert(LoseScreen)
         .with_children(|p| {
-            // Display start game button
+            p.spawn_bundle(TextBundle {
+                text: Text::with_section(
+                    "You Lost",
+                    TextStyle {
+                        font: font_assets.font_bold.clone(),
+                        font_size: 120.,
+                        color: TEXT_COLOR,
+                    },
+                    Default::default(),
+                ),
+                style: Style {
+                    margin: Rect {
+                        top: Val::Px(150.),
+                        ..default()
+                    },
+                    ..default()
+                },
+                ..default()
+            });
+
             p.spawn_bundle(ButtonBundle {
-                style: button_style.clone(),
+                style: Style {
+                    size: Size::new(Val::Px(400.), Val::Px(65.)),
+                    margin: Rect::all(Val::Auto),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
                 color: NORMAL_BUTTON.into(),
                 ..default()
             })
@@ -74,7 +84,11 @@ fn lose_setup(
                 p.spawn_bundle(TextBundle {
                     text: Text::with_section(
                         "Back to Main Menu",
-                        button_text_style.clone(),
+                        TextStyle {
+                            font: font_assets.font.clone(),
+                            font_size: 40.0,
+                            color: TEXT_COLOR,
+                        },
                         Default::default(),
                     ),
                     ..default()

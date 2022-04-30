@@ -1,4 +1,4 @@
-use crate::{despawn_screen, Enemy, ImageAssets, Player, Stats, EnemyTable};
+use crate::{despawn_screen, Enemy, EnemyTable, ImageAssets, Player};
 
 use super::{GameState, BACKGROUND_SIZE};
 use bevy::{math::const_vec2, prelude::*};
@@ -6,8 +6,8 @@ use bevy::{math::const_vec2, prelude::*};
 const TIME_STEP: f32 = 1.0 / 60.0;
 
 const PLAYER_SPEED: f32 = 640.0;
-const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
 const PLAYER_SPRINT: f32 = 1.5;
+const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
 
 pub struct OverworldPlugin;
 
@@ -31,7 +31,13 @@ impl Plugin for OverworldPlugin {
 #[derive(Component)]
 struct OverworldScreen;
 
-fn overworld_setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
+fn overworld_setup(
+    mut commands: Commands,
+    image_assets: Res<ImageAssets>,
+    mut player: ResMut<Player>,
+) {
+    commands.init_resource::<EnemyTable>();
+
     // Overworld
     commands
         .spawn_bundle(SpriteBundle {
@@ -46,36 +52,32 @@ fn overworld_setup(mut commands: Commands, image_assets: Res<ImageAssets>) {
             },
             ..default()
         })
-        .insert(OverworldScreen);
-
-    // Enemies
-    commands.init_resource::<EnemyTable>();
-
-    // Player
-    commands
-        .spawn_bundle(SpriteBundle {
-            transform: Transform {
-                translation: Vec3::new(0., 50., 100.), // TODO: use player's last known coords
-                ..default()
-            },
-            texture: image_assets.player_down.clone(),
-            sprite: Sprite {
-                custom_size: Some(PLAYER_SIZE),
-                ..default()
-            },
-            ..default()
-        })
-        .insert(Player)
-        .insert(Stats {
-            ..Stats::new(image_assets.player_battle.clone())
+        .insert(OverworldScreen)
+        .with_children(|p| {
+            player.entity = Some(
+                p.spawn_bundle(SpriteBundle {
+                    transform: Transform {
+                        translation: Vec3::new(player.x, player.y, 100.), // TODO: use player's last known coords
+                        ..default()
+                    },
+                    texture: image_assets.player_down.clone(),
+                    sprite: Sprite {
+                        custom_size: Some(PLAYER_SIZE),
+                        ..default()
+                    },
+                    ..default()
+                })
+                .id(),
+            );
         });
 }
 
 fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<Player>>,
+    mut player: ResMut<Player>,
+    mut transforms: Query<&mut Transform>,
 ) {
-    let mut player_transform = query.single_mut();
+    let player_transform = &mut transforms.get_mut(player.entity.unwrap()).unwrap();
     let mut direction_horizontal = 0.0;
     let mut direction_vertical = 0.0;
 
@@ -101,6 +103,9 @@ fn move_player(
     let new_player_position_y =
         player_transform.translation.y + direction_vertical * PLAYER_SPEED * TIME_STEP;
 
+    player.x = new_player_position_x;
+    player.y = new_player_position_y;
+
     // TODO: clamp within map area
     player_transform.translation.x = new_player_position_x;
     player_transform.translation.y = new_player_position_y;
@@ -108,10 +113,10 @@ fn move_player(
 
 fn change_player_image(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Handle<Image>, With<Player>>,
     image_assets: Res<ImageAssets>,
+    player: ResMut<Player>,
+    mut image: Query<&mut Handle<Image>>,
 ) {
-    let mut player_image = query.single_mut();
     let new_player_image = if keyboard_input.pressed(KeyCode::Left) {
         Some(image_assets.player_left.clone())
     } else if keyboard_input.pressed(KeyCode::Right) {
@@ -126,7 +131,7 @@ fn change_player_image(
     };
 
     if let Some(new_player_image) = new_player_image {
-        *player_image = new_player_image;
+        *image.get_mut(player.entity.unwrap()).unwrap() = new_player_image;
     }
 }
 
@@ -137,16 +142,16 @@ fn spawn_monster(
     mut game_state: ResMut<State<GameState>>,
     mut commands: Commands,
     enemy_table: Res<EnemyTable>,
+    mut enemy: ResMut<Enemy>,
 ) {
     if keyboard_input.just_pressed(KeyCode::P) {
         // TODO: random chance, area enemies
         let enemy_stats = enemy_table.table.get("Slime").unwrap().0.clone();
         let stats = enemy_table.table.get("Slime").unwrap().1.clone();
-        commands
-            .spawn()
-            .insert(Enemy)
-            .insert(enemy_stats)
-            .insert(stats);
+
+        enemy.entity = Some(commands.spawn().id());
+        enemy.stats = stats;
+        enemy.enemy_stats = enemy_stats;
         game_state.set(GameState::Battle).unwrap();
     }
 }

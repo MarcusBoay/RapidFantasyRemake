@@ -1,7 +1,7 @@
 mod battle;
+mod enemy_table;
 mod mainmenu; // why does this work?????
 mod overworld;
-mod enemy_table;
 use bevy::{math::const_vec2, prelude::*, utils::HashMap, window::PresentMode};
 use bevy_asset_loader::{AssetCollection, AssetLoader};
 
@@ -20,6 +20,8 @@ fn main() {
         ..default()
     })
     .insert_resource(ClearColor(BACKGROUND_COLOR))
+    .init_resource::<Player>()
+    .init_resource::<Enemy>()
     .add_state(GameState::Initialization)
     .add_startup_system(setup_main)
     .add_plugins(DefaultPlugins)
@@ -82,10 +84,15 @@ pub struct FontAssets {
     font: Handle<Font>,
 }
 
-#[derive(Component)]
-struct Player;
+#[derive(Default)]
+struct Player {
+    entity: Option<Entity>,
+    x: f32,
+    y: f32,
+    stats: Stats,
+}
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 struct Stats {
     hp_max: i32,
     mp_max: i32,
@@ -121,18 +128,17 @@ impl Stats {
 #[derive(Component)]
 struct LimitBreak(i32);
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 struct EnemyStats {
     id: usize,
     name: String,
     description: String,
-    element: Element,
+    element: Option<Element>,
     next_phase: Option<usize>, // id? maybe another enemystats?
 } // TODO: implement enemy table
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum Element {
-    None,
     Fire,
     Earth,
     Electric,
@@ -141,8 +147,12 @@ enum Element {
     Dark,
 } // TODO: implement damage lookup table
 
-#[derive(Component)]
-struct Enemy;
+#[derive(Default, Component)]
+struct Enemy {
+    entity: Option<Entity>,
+    stats: Stats,
+    enemy_stats: EnemyStats,
+}
 
 fn setup_main(mut commands: Commands) {
     // Cameras

@@ -1,6 +1,6 @@
 use crate::{
-    button_system, despawn_screen, set_visible_recursive, Enemy, EnemyStats, FontAssets,
-    Player, Stats,
+    button_system, despawn_screen, set_visible_recursive, Enemy, EnemyStats, FontAssets, Player,
+    Stats,
 };
 
 mod styles;
@@ -38,6 +38,10 @@ impl Plugin for BattlePlugin {
             .add_system_set(
                 SystemSet::on_update(BattleState::EnemyAttack).with_system(battle_update),
             )
+            .add_system_set(SystemSet::on_enter(BattleState::Win).with_system(win_setup))
+            .add_system_set(SystemSet::on_update(BattleState::Win).with_system(battle_update))
+            .add_system_set(SystemSet::on_enter(BattleState::Lose).with_system(lose_setup))
+            .add_system_set(SystemSet::on_update(BattleState::Lose).with_system(battle_update))
             // When exiting the state, despawn everything that was spawned for this screen.
             .add_system_set(
                 SystemSet::on_exit(GameState::Battle).with_system(despawn_screen::<BattleScreen>),
@@ -56,6 +60,7 @@ enum BattleState {
     EnemyAttack,
     Win,
     Lose,
+    Deinitialize,
     // maybe magic menu state?
 }
 #[derive(Component, Debug, Clone)]
@@ -83,41 +88,22 @@ const TEXT_DURATION: f32 = 1.5;
 fn battle_setup(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
-    mut stats: ParamSet<(
-        Query<&mut Stats, With<Player>>,
-        Query<&mut Stats, With<Enemy>>,
-        Query<&mut EnemyStats, With<Enemy>>,
-    )>,
+    player: Res<Player>,
+    enemy: Res<Enemy>,
+    mut battle_state: ResMut<State<BattleState>>,
 ) {
-    let mut hp = 0;
-    let mut hp_max = 0;
-    let mut mp = 0;
-    let mut mp_max = 0;
-    let mut hp_perc = 0.;
-    let mut mp_perc = 0.;
-    let mut player_sprite = Default::default();
-    for player_stats in stats.p0().iter() {
-        hp = player_stats.hp;
-        hp_max = player_stats.hp_max;
-        mp = player_stats.mp;
-        mp_max = player_stats.mp_max;
-        hp_perc = player_stats.hp as f32 / player_stats.hp_max as f32 * 100.;
-        mp_perc = player_stats.mp as f32 / player_stats.mp_max as f32 * 100.;
-        player_sprite = player_stats.battle_sprite.clone();
-    }
+    let player = &player.stats;
+    let hp_perc = player.hp as f32 / player.hp_max as f32 * 100.;
+    let mp_perc = player.mp as f32 / player.mp_max as f32 * 100.;
 
-    let mut enemy_sprite = Default::default();
-    for enemy_stats in stats.p1().iter() {
-        enemy_sprite = enemy_stats.battle_sprite.clone();
-    }
-
-    let mut enemy_name = "".to_string();
-    for enemy_stats in stats.p2().iter() {
-        enemy_name = enemy_stats.name.clone();
-    }
+    let enemy_sprite = enemy.stats.battle_sprite.clone();
+    let enemy_name = enemy.enemy_stats.name.clone();
 
     // This will set BattleState::Initialization to BattleState::Idle in 1 second.
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
+    if *battle_state.current() == BattleState::Deinitialize {
+        battle_state.set(BattleState::Initialization).unwrap();
+    }
 
     commands
         .spawn_bundle(styled_battle_screen())
@@ -129,8 +115,12 @@ fn battle_setup(
                         .with_children(|p| {
                             p.spawn_bundle(styled_player_stats_child_container())
                                 .with_children(|p| {
-                                    p.spawn_bundle(styled_player_hp_text(&font_assets, hp, hp_max))
-                                        .insert(HealthText);
+                                    p.spawn_bundle(styled_player_hp_text(
+                                        &font_assets,
+                                        player.hp,
+                                        player.hp_max,
+                                    ))
+                                    .insert(HealthText);
                                     p.spawn_bundle(styled_player_hp_bar_container())
                                         .with_children(|p| {
                                             p.spawn_bundle(styled_player_hp_bar(hp_perc))
@@ -140,7 +130,11 @@ fn battle_setup(
 
                             p.spawn_bundle(styled_player_stats_child_container())
                                 .with_children(|p| {
-                                    p.spawn_bundle(styled_player_mp_text(&font_assets, mp, mp_max));
+                                    p.spawn_bundle(styled_player_mp_text(
+                                        &font_assets,
+                                        player.mp,
+                                        player.mp_max,
+                                    ));
                                     p.spawn_bundle(styled_player_mp_bar_container())
                                         .with_children(|p| {
                                             p.spawn_bundle(styled_player_mp_bar(mp_perc));
@@ -186,7 +180,7 @@ fn battle_setup(
 
             p.spawn_bundle(styled_battle_images_container())
                 .with_children(|p| {
-                    p.spawn_bundle(styled_battle_portrait(player_sprite));
+                    p.spawn_bundle(styled_battle_portrait(player.battle_sprite.clone()));
                     p.spawn_bundle(styled_battle_portrait(enemy_sprite));
                 });
         });
@@ -229,27 +223,19 @@ fn battle_action(
 
 fn player_attack_setup(
     mut commands: Commands,
-    mut set: ParamSet<(
-        Query<&Stats, With<Player>>,
-        Query<&mut Stats, With<Enemy>>,
-        Query<&mut Text, With<Announcement>>,
-    )>,
+    mut announcement_text: Query<&mut Text, With<Announcement>>,
+    player: Res<Player>,
+    mut enemy: ResMut<Enemy>,
 ) {
     // TODO: update player MP if needed...
     // TODO: calculate damage
-    let mut damage = 0;
-    for player_stats in set.p0().iter() {
-        damage = player_stats.strength;
-    }
+    let damage = player.stats.strength;
 
-    for mut enemy_stats in set.p1().iter_mut() {
-        enemy_stats.hp -= damage;
-        println!("enemy hp: {}", enemy_stats.hp);
-    }
+    enemy.stats.hp -= damage;
+    println!("enemy hp: {}", enemy.stats.hp); // TODO: make enemy hp bar
 
-    for mut announcement_text in set.p2().iter_mut() {
-        announcement_text.sections[0].value = format!("You did {} damage to the enemy!", damage);
-    }
+    announcement_text.single_mut().sections[0].value =
+        format!("You did {} damage to the enemy!", damage);
 
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
 }
@@ -257,59 +243,104 @@ fn player_attack_setup(
 fn enemy_attack_setup(
     mut commands: Commands,
     mut set: ParamSet<(
-        Query<&mut Stats, With<Player>>,
-        Query<&Stats, With<Enemy>>,
         Query<&mut Text, With<Announcement>>,
         Query<&mut Text, With<HealthText>>,
         Query<&mut Style, With<HealthBar>>,
     )>,
+    mut player: ResMut<Player>,
+    enemy: Res<Enemy>,
 ) {
     // TODO: calculate damage
-    let mut damage = 0;
-    for enemy_stats in set.p1().iter() {
-        damage = enemy_stats.strength;
-    }
+    let damage = enemy.stats.strength;
 
-    let mut player_hp = 0;
-    let mut player_max_hp = 0;
-    for mut player_stats in set.p0().iter_mut() {
-        player_stats.hp -= damage;
-        player_hp = player_stats.hp;
-        player_max_hp = player_stats.hp_max;
-    }
+    let mut player = &mut player.stats;
+    player.hp -= damage;
 
-    for mut announcement_text in set.p2().iter_mut() {
+    for mut announcement_text in set.p0().iter_mut() {
         announcement_text.sections[0].value = format!("They did {} damage to you!", damage);
     }
 
-    // TODO: put these into another system with Changed<> query filter... maybe
-    for mut health_text in set.p3().iter_mut() {
-        health_text.sections[1].value = format!("{} / {}", player_hp, player_max_hp);
+    // TODO: maybe put these into another system with Changed<> query filter...
+    for mut health_text in set.p1().iter_mut() {
+        health_text.sections[1].value = format!("{} / {}", player.hp, player.hp_max);
     }
 
-    let player_hp_perc = player_hp as f32 / player_max_hp as f32 * 100.;
-    for mut health_bar in set.p4().iter_mut() {
+    let player_hp_perc = player.hp as f32 / player.hp_max as f32 * 100.;
+    for mut health_bar in set.p2().iter_mut() {
         health_bar.size = Size::new(Val::Percent(player_hp_perc), Val::Percent(100.));
     }
 
     commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
 }
 
+fn win_setup(
+    mut commands: Commands,
+    mut set: ParamSet<(Query<&mut Text, With<Announcement>>,)>,
+    enemy: Res<Enemy>,
+) {
+    let enemy_name = enemy.enemy_stats.name.clone();
+
+    for mut announcement_text in set.p0().iter_mut() {
+        announcement_text.sections[0].value = format!("You defeated {}!", enemy_name);
+    }
+
+    commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
+}
+
+fn lose_setup(
+    mut commands: Commands,
+    mut set: ParamSet<(Query<&mut Text, With<Announcement>>,)>,
+    enemy: Res<Enemy>,
+) {
+    let enemy_name = enemy.enemy_stats.name.clone();
+
+    for mut announcement_text in set.p0().iter_mut() {
+        announcement_text.sections[0].value = format!("{} defeated you!", enemy_name);
+    }
+
+    commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
+}
+
 fn battle_update(
+    mut commands: Commands,
     time: Res<Time>,
     mut timer: ResMut<Timer>,
     mut battle_state: ResMut<State<BattleState>>,
     mut game_state: ResMut<State<GameState>>,
+    enemy: Res<Enemy>,
+    player: Res<Player>,
 ) {
-    // TODO: check win/lose
     if timer.tick(time.delta()).finished() {
         match battle_state.as_ref().current() {
             BattleState::Initialization => battle_state.set(BattleState::Idle).unwrap(),
             BattleState::PlayerAttack => {
-                battle_state.set(BattleState::EnemyAttack).unwrap();
+                if enemy.stats.hp <= 0 {
+                    battle_state.set(BattleState::Win).unwrap();
+                } else {
+                    battle_state.set(BattleState::EnemyAttack).unwrap();
+                }
             }
             BattleState::EnemyAttack => {
-                battle_state.set(BattleState::Idle).unwrap();
+                // TODO: lose state
+                if player.stats.hp <= 0 {
+                    battle_state.set(BattleState::Lose).unwrap();
+                } else {
+                    battle_state.set(BattleState::Idle).unwrap();
+                }
+            }
+            BattleState::Win => {
+                battle_state.set(BattleState::Deinitialize).unwrap();
+                game_state.set(GameState::Overworld).unwrap();
+                // TODO: transition to final boss victory screen
+            }
+            BattleState::Lose => {
+                battle_state.set(BattleState::Deinitialize).unwrap();
+                game_state.set(GameState::Lose).unwrap();
+            }
+            BattleState::Deinitialize => {
+                if let Some(e) = enemy.entity {
+                    commands.entity(e).despawn_recursive();
+                }
             }
             _ => (),
         }

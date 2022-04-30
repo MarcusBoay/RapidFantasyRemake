@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::{EnemyTable, ImageAssets, EnemyStats, Element, Stats};
+use crate::{EnemyStats, EnemyTable, ImageAssets, Stats};
 
 impl FromWorld for EnemyTable {
     fn from_world(world: &mut World) -> Self {
@@ -15,7 +15,7 @@ impl FromWorld for EnemyTable {
                     id: enemies.len(),
                     name: name.clone(),
                     description: "I wonder if it\'s edible?".to_string(),
-                    element: Element::None,
+                    element: None,
                     next_phase: None,
                 },
                 Stats {

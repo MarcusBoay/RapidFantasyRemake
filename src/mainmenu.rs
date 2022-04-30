@@ -1,4 +1,4 @@
-use crate::{button_system, FontAssets, ImageAssets, NORMAL_BUTTON};
+use crate::{button_system, FontAssets, ImageAssets, Player, Stats, NORMAL_BUTTON};
 
 use super::{despawn_screen, GameState, TEXT_COLOR};
 use bevy::{prelude::*, window::WindowMode};
@@ -98,33 +98,24 @@ fn main_menu_setup(
             ..default()
         })
         .insert(MainMenuScreen)
-        .with_children(|parent| {
+        .with_children(|p| {
             // Display start game button
-            parent
-                .spawn_bundle(ButtonBundle {
-                    style: button_style.clone(),
-                    color: NORMAL_BUTTON.into(),
+            p.spawn_bundle(ButtonBundle {
+                style: button_style.clone(),
+                color: NORMAL_BUTTON.into(),
+                ..default()
+            })
+            .insert(MenuButtonAction::Play)
+            .with_children(|p| {
+                p.spawn_bundle(TextBundle {
+                    text: Text::with_section(
+                        "New Game",
+                        button_text_style.clone(),
+                        Default::default(),
+                    ),
                     ..default()
-                })
-                .insert(MenuButtonAction::Play)
-                .with_children(|parent| {
-                    // parent.spawn_bundle(TextBundle {
-                    //     text: Text::with_section(
-                    //         "Start Game",
-                    //         button_text_style.clone(),
-                    //         Default::default(),
-                    //     ),
-                    //     ..default()
-                    // });
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "New Game",
-                            button_text_style.clone(),
-                            Default::default(),
-                        ),
-                        ..default()
-                    });
                 });
+            });
 
             // TODO: settings button
         });
@@ -137,6 +128,8 @@ fn menu_action(
     >,
     mut menu_state: ResMut<State<MenuState>>,
     mut game_state: ResMut<State<GameState>>,
+    mut player: ResMut<Player>,
+    image_assets: Res<ImageAssets>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         if *interaction == Interaction::Clicked {
@@ -144,6 +137,7 @@ fn menu_action(
                 MenuButtonAction::Play => {
                     game_state.set(GameState::Overworld).unwrap();
                     menu_state.set(MenuState::Disabled).unwrap();
+                    player.stats = Stats::new(image_assets.player_battle.clone());
                 }
                 _ => unimplemented!("Unhandled menu button action!!"), // TODO
             }

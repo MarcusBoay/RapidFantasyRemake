@@ -1,12 +1,9 @@
-use crate::{
-    button_system, despawn_screen, set_visible_recursive, Enemy, FontAssets, Player, XP_TABLE,
-};
+use crate::{button_system, despawn_screen, global, set_visible_recursive, FontAssets};
 
 mod styles;
 use queues::*;
 pub use styles::*;
 
-use super::GameState;
 use bevy::prelude::*;
 
 pub struct BattlePlugin;
@@ -15,8 +12,12 @@ impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
         app.add_state(BattleState::Initialization)
             .init_resource::<Announcement>()
-            .add_system_set(SystemSet::on_enter(GameState::Battle).with_system(battle_setup))
-            .add_system_set(SystemSet::on_update(GameState::Battle).with_system(battle_init))
+            .add_system_set(
+                SystemSet::on_enter(global::GameState::Battle).with_system(battle_setup),
+            )
+            .add_system_set(
+                SystemSet::on_update(global::GameState::Battle).with_system(battle_init),
+            )
             .add_system_set(SystemSet::on_enter(BattleState::Idle).with_system(idle_init))
             .add_system_set(
                 SystemSet::on_update(BattleState::Idle)
@@ -45,7 +46,8 @@ impl Plugin for BattlePlugin {
             .add_system_set(SystemSet::on_update(BattleState::Lose).with_system(battle_update))
             // When exiting the state, despawn everything that was spawned for this screen.
             .add_system_set(
-                SystemSet::on_exit(GameState::Battle).with_system(despawn_screen::<BattleScreen>),
+                SystemSet::on_exit(global::GameState::Battle)
+                    .with_system(despawn_screen::<BattleScreen>),
             );
     }
 }
@@ -92,8 +94,8 @@ const TEXT_DURATION: f32 = 2.;
 fn battle_setup(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
-    player: Res<Player>,
-    enemy: Res<Enemy>,
+    player: Res<global::Player>,
+    enemy: Res<global::Enemy>,
     mut battle_state: ResMut<State<BattleState>>,
     mut announcement: ResMut<Announcement>,
 ) {
@@ -236,8 +238,8 @@ fn battle_action(
 
 fn player_attack_setup(
     mut announcement: ResMut<Announcement>,
-    player: Res<Player>,
-    mut enemy: ResMut<Enemy>,
+    player: Res<global::Player>,
+    mut enemy: ResMut<global::Enemy>,
 ) {
     // TODO: update player MP if needed...
     // TODO: calculate damage
@@ -257,8 +259,8 @@ fn enemy_attack_setup(
         Query<&mut Style, With<HealthBar>>,
     )>,
     mut announcement: ResMut<Announcement>,
-    mut player: ResMut<Player>,
-    enemy: Res<Enemy>,
+    mut player: ResMut<global::Player>,
+    enemy: Res<global::Enemy>,
 ) {
     // TODO: calculate damage
     let damage = enemy.stats.strength;
@@ -283,8 +285,8 @@ fn enemy_attack_setup(
 
 fn win_setup(
     mut announcement: ResMut<Announcement>,
-    mut player: ResMut<Player>,
-    enemy: Res<Enemy>,
+    mut player: ResMut<global::Player>,
+    enemy: Res<global::Enemy>,
 ) {
     let mut player = &mut player.stats;
     let enemy_name = enemy.enemy_stats.name.clone();
@@ -295,8 +297,8 @@ fn win_setup(
 
     // Level up
     player.experience += enemy.stats.experience;
-    if player.level < 5 && player.experience >= XP_TABLE[player.level as usize - 1] {
-        player.experience %= XP_TABLE[player.level as usize - 1];
+    if player.level < 5 && player.experience >= global::XP_TABLE[player.level as usize - 1] {
+        player.experience %= global::XP_TABLE[player.level as usize - 1];
         player.level += 1;
 
         player.hp_max += player.level * 50;
@@ -314,7 +316,7 @@ fn win_setup(
     // TODO: gain loot
 }
 
-fn lose_setup(mut announcement: ResMut<Announcement>, enemy: Res<Enemy>) {
+fn lose_setup(mut announcement: ResMut<Announcement>, enemy: Res<global::Enemy>) {
     let enemy_name = enemy.enemy_stats.name.clone();
     let _ = announcement
         .texts
@@ -326,12 +328,12 @@ fn battle_update(
     time: Res<Time>,
     mut timer: ResMut<Timer>,
     mut battle_state: ResMut<State<BattleState>>,
-    mut game_state: ResMut<State<GameState>>,
+    mut game_state: ResMut<State<global::GameState>>,
     mut announcement: ResMut<Announcement>,
     mut announcement_text: Query<&mut Text>,
     font_assets: Res<FontAssets>,
-    enemy: Res<Enemy>,
-    player: Res<Player>,
+    enemy: Res<global::Enemy>,
+    player: Res<global::Player>,
 ) {
     if timer.tick(time.delta()).finished() {
         if let Ok(text) = announcement.texts.remove() {
@@ -360,12 +362,12 @@ fn battle_update(
                 }
                 BattleState::Win => {
                     battle_state.set(BattleState::Deinitialize).unwrap();
-                    game_state.set(GameState::Overworld).unwrap();
+                    game_state.set(global::GameState::Overworld).unwrap();
                     // TODO: transition to final boss victory screen
                 }
                 BattleState::Lose => {
                     battle_state.set(BattleState::Deinitialize).unwrap();
-                    game_state.set(GameState::Lose).unwrap();
+                    game_state.set(global::GameState::Lose).unwrap();
                 }
                 BattleState::Deinitialize => {
                     if let Some(e) = enemy.entity {

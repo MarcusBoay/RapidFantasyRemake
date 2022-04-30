@@ -1,6 +1,5 @@
-use crate::{button_system, FontAssets, ImageAssets};
+use crate::{button_system, despawn_screen, global, FontAssets, ImageAssets};
 
-use super::{despawn_screen, GameState};
 use bevy::prelude::*;
 
 mod styles;
@@ -9,14 +8,15 @@ pub struct LosePlugin;
 
 impl Plugin for LosePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(GameState::Lose).with_system(lose_setup))
+        app.add_system_set(SystemSet::on_enter(global::GameState::Lose).with_system(lose_setup))
             .add_system_set(
-                SystemSet::on_update(GameState::Lose)
+                SystemSet::on_update(global::GameState::Lose)
                     .with_system(menu_action)
                     .with_system(button_system),
             )
             .add_system_set(
-                SystemSet::on_exit(GameState::Lose).with_system(despawn_screen::<LoseScreen>),
+                SystemSet::on_exit(global::GameState::Lose)
+                    .with_system(despawn_screen::<LoseScreen>),
             );
     }
 }
@@ -53,13 +53,13 @@ fn menu_action(
         (&Interaction, &MenuButtonAction),
         (Changed<Interaction>, With<Button>),
     >,
-    mut game_state: ResMut<State<GameState>>,
+    mut game_state: ResMut<State<global::GameState>>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         if *interaction == Interaction::Clicked {
             match menu_button_action {
                 MenuButtonAction::BackToMainMenu => {
-                    game_state.set(GameState::MainMenu).unwrap();
+                    game_state.set(global::GameState::MainMenu).unwrap();
                 }
             }
         }

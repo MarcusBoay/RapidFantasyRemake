@@ -1,6 +1,5 @@
-use crate::{despawn_screen, Enemy, EnemyTable, ImageAssets, Player};
+use crate::{despawn_screen, global, ImageAssets};
 
-use super::{GameState, BACKGROUND_SIZE};
 use bevy::{math::const_vec2, prelude::*};
 
 const TIME_STEP: f32 = 1.0 / 60.0;
@@ -13,18 +12,20 @@ pub struct OverworldPlugin;
 
 impl Plugin for OverworldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(overworld_setup))
-            .add_system_set(
-                SystemSet::on_update(GameState::Overworld)
-                    .with_system(move_player)
-                    .with_system(change_player_image)
-                    .with_system(spawn_monster),
-            )
-            // When exiting the state, despawn everything that was spawned for this screen
-            .add_system_set(
-                SystemSet::on_exit(GameState::Overworld)
-                    .with_system(despawn_screen::<OverworldScreen>),
-            );
+        app.add_system_set(
+            SystemSet::on_enter(global::GameState::Overworld).with_system(overworld_setup),
+        )
+        .add_system_set(
+            SystemSet::on_update(global::GameState::Overworld)
+                .with_system(move_player)
+                .with_system(change_player_image)
+                .with_system(spawn_monster),
+        )
+        // When exiting the state, despawn everything that was spawned for this screen
+        .add_system_set(
+            SystemSet::on_exit(global::GameState::Overworld)
+                .with_system(despawn_screen::<OverworldScreen>),
+        );
     }
 }
 
@@ -34,9 +35,9 @@ struct OverworldScreen;
 fn overworld_setup(
     mut commands: Commands,
     image_assets: Res<ImageAssets>,
-    mut player: ResMut<Player>,
+    mut player: ResMut<global::Player>,
 ) {
-    commands.init_resource::<EnemyTable>();
+    commands.init_resource::<global::EnemyTable>();
 
     // Overworld
     commands
@@ -47,7 +48,7 @@ fn overworld_setup(
             },
             texture: image_assets.overworld1.clone(),
             sprite: Sprite {
-                custom_size: Some(BACKGROUND_SIZE),
+                custom_size: Some(global::BACKGROUND_SIZE),
                 ..default()
             },
             ..default()
@@ -74,7 +75,7 @@ fn overworld_setup(
 
 fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut player: ResMut<Player>,
+    mut player: ResMut<global::Player>,
     mut transforms: Query<&mut Transform>,
 ) {
     let player_transform = &mut transforms.get_mut(player.entity.unwrap()).unwrap();
@@ -114,7 +115,7 @@ fn move_player(
 fn change_player_image(
     keyboard_input: Res<Input<KeyCode>>,
     image_assets: Res<ImageAssets>,
-    player: ResMut<Player>,
+    player: ResMut<global::Player>,
     mut image: Query<&mut Handle<Image>>,
 ) {
     let new_player_image = if keyboard_input.pressed(KeyCode::Left) {
@@ -139,10 +140,10 @@ fn change_player_image(
 // TODO: spawn final boss monster during interaction
 fn spawn_monster(
     keyboard_input: Res<Input<KeyCode>>,
-    mut game_state: ResMut<State<GameState>>,
+    mut game_state: ResMut<State<global::GameState>>,
     mut commands: Commands,
-    enemy_table: Res<EnemyTable>,
-    mut enemy: ResMut<Enemy>,
+    enemy_table: Res<global::EnemyTable>,
+    mut enemy: ResMut<global::Enemy>,
 ) {
     if keyboard_input.just_pressed(KeyCode::P) {
         // TODO: random chance, area enemies
@@ -152,6 +153,6 @@ fn spawn_monster(
         enemy.entity = Some(commands.spawn().id());
         enemy.stats = stats;
         enemy.enemy_stats = enemy_stats;
-        game_state.set(GameState::Battle).unwrap();
+        game_state.set(global::GameState::Battle).unwrap();
     }
 }

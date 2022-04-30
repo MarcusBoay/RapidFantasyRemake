@@ -1,4 +1,4 @@
-use crate::{FontAssets, ImageAssets, TEXT_COLOR, NORMAL_BUTTON};
+use crate::{global, FontAssets, ImageAssets};
 use bevy::prelude::*;
 
 pub fn styled_lose_screen(image_assets: &Res<ImageAssets>) -> NodeBundle {
@@ -24,7 +24,7 @@ pub fn styled_lose_header(font_assets: &Res<FontAssets>) -> TextBundle {
             TextStyle {
                 font: font_assets.font_bold.clone(),
                 font_size: 120.,
-                color: TEXT_COLOR,
+                color: global::TEXT_COLOR,
             },
             Default::default(),
         ),
@@ -48,7 +48,7 @@ pub fn styled_button() -> ButtonBundle {
             align_items: AlignItems::Center,
             ..default()
         },
-        color: NORMAL_BUTTON.into(),
+        color: global::NORMAL_BUTTON.into(),
         ..default()
     }
 }
@@ -60,7 +60,7 @@ pub fn styled_button_text(font_assets: &Res<FontAssets>) -> TextBundle {
             TextStyle {
                 font: font_assets.font.clone(),
                 font_size: 40.0,
-                color: TEXT_COLOR,
+                color: global::TEXT_COLOR,
             },
             Default::default(),
         ),

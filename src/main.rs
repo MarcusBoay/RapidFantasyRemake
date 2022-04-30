@@ -1,5 +1,6 @@
 mod battle;
 mod enemy_table;
+mod global;
 mod lose;
 mod mainmenu; // why does this work?????
 mod overworld;
@@ -8,8 +9,8 @@ use bevy_asset_loader::{AssetCollection, AssetLoader};
 
 fn main() {
     let mut app = App::new();
-    AssetLoader::new(GameState::Initialization)
-        .continue_to_state(GameState::MainMenu) // TODO: change back to MainMenu after done testing
+    AssetLoader::new(global::GameState::Initialization)
+        .continue_to_state(global::GameState::MainMenu) // TODO: change back to MainMenu after done testing
         .with_collection::<ImageAssets>()
         .with_collection::<FontAssets>()
         .build(&mut app);
@@ -20,10 +21,10 @@ fn main() {
         present_mode: PresentMode::Fifo,
         ..default()
     })
-    .insert_resource(ClearColor(BACKGROUND_COLOR))
-    .init_resource::<Player>()
-    .init_resource::<Enemy>()
-    .add_state(GameState::Initialization)
+    .insert_resource(ClearColor(global::BACKGROUND_COLOR))
+    .init_resource::<global::Player>()
+    .init_resource::<global::Enemy>()
+    .add_state(global::GameState::Initialization)
     .add_startup_system(setup_main)
     .add_plugins(DefaultPlugins)
     .add_plugin(mainmenu::MainMenuPlugin)
@@ -32,29 +33,6 @@ fn main() {
     .add_plugin(lose::LosePlugin)
     .run();
 }
-
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
-enum GameState {
-    Initialization,
-    MainMenu,
-    Overworld,
-    Menu,
-    Battle,
-    Lose,
-    FinalVictory,
-    Exit,
-}
-
-const TEXT_COLOR: Color = Color::BLACK;
-const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
-const BACKGROUND_COLOR: Color = Color::BLACK;
-
-const NORMAL_BUTTON: Color = Color::rgb(0.6, 0.6, 0.6);
-const HOVERED_BUTTON: Color = Color::rgb(0.8, 0.8, 0.8);
-const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-const PRESSED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-
-const XP_TABLE: [i32; 5] = [1000, 8000, 27000, 64000, 1];
 
 // Tag component used to mark which setting is currently selected
 #[derive(Component)]
@@ -93,80 +71,6 @@ pub struct FontAssets {
     font_bold: Handle<Font>,
 }
 
-#[derive(Default)]
-struct Player {
-    entity: Option<Entity>,
-    x: f32,
-    y: f32,
-    stats: Stats,
-}
-
-#[derive(Component, Clone, Default)]
-struct Stats {
-    hp_max: i32,
-    mp_max: i32,
-    hp: i32,
-    mp: i32,
-    strength: i32,
-    wisdom: i32,
-    defense: i32,
-    level: i32,
-    experience: i32,
-    gold: i32,
-    battle_sprite: Handle<Image>,
-}
-
-impl Stats {
-    fn new(battle_sprite: Handle<Image>) -> Self {
-        Stats {
-            hp_max: 50,
-            mp_max: 50,
-            hp: 50,
-            mp: 50,
-            strength: 12,
-            wisdom: 12,
-            defense: 5,
-            level: 1,
-            experience: 0,
-            gold: 0,
-            battle_sprite,
-        }
-    }
-}
-
-#[derive(Component)]
-struct LimitBreak(i32);
-
-#[derive(Component, Clone, Default)]
-struct EnemyStats {
-    id: usize,
-    name: String,
-    description: String,
-    element: Option<Element>,
-    next_phase: Option<usize>, // id? maybe another enemystats?
-} // TODO: implement enemy table
-
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
-enum Element {
-    Fire,
-    Earth,
-    Electric,
-    Water,
-    Light,
-    Dark,
-} // TODO: implement damage lookup table
-
-#[derive(Default, Component)]
-struct Enemy {
-    entity: Option<Entity>,
-    stats: Stats,
-    enemy_stats: EnemyStats,
-}
-
-struct EnemyTable {
-    pub table: HashMap<String, (EnemyStats, Stats)>, // TODO: maybe change this to an array?
-}
-
 fn setup_main(mut commands: Commands) {
     // Cameras
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -182,11 +86,11 @@ fn button_system(
 ) {
     for (interaction, mut color, selected) in interaction_query.iter_mut() {
         *color = match (*interaction, selected) {
-            (Interaction::Clicked, _) => PRESSED_BUTTON.into(),
-            (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON.into(),
-            (Interaction::Hovered, None) => HOVERED_BUTTON.into(),
-            (Interaction::None, Some(_)) => PRESSED_BUTTON.into(),
-            (Interaction::None, None) => NORMAL_BUTTON.into(),
+            (Interaction::Clicked, _) => global::PRESSED_BUTTON.into(),
+            (Interaction::Hovered, Some(_)) => global::HOVERED_PRESSED_BUTTON.into(),
+            (Interaction::Hovered, None) => global::HOVERED_BUTTON.into(),
+            (Interaction::None, Some(_)) => global::PRESSED_BUTTON.into(),
+            (Interaction::None, None) => global::NORMAL_BUTTON.into(),
         }
     }
 }

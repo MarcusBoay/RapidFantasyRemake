@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{FontAssets, NORMAL_BUTTON, TEXT_COLOR};
+use crate::{global, FontAssets};
 
 use super::PlayerButtonAction;
 
@@ -8,7 +8,7 @@ pub fn common_text_style(font_assets: &Res<FontAssets>) -> TextStyle {
     TextStyle {
         font: font_assets.font.clone(),
         font_size: 24.,
-        color: TEXT_COLOR,
+        color: global::TEXT_COLOR,
     }
 }
 
@@ -198,7 +198,7 @@ pub fn styled_player_action_button() -> ButtonBundle {
             ..default()
         },
         visibility: Visibility { is_visible: false },
-        color: NORMAL_BUTTON.into(),
+        color: global::NORMAL_BUTTON.into(),
         ..default()
     }
 }
@@ -213,7 +213,7 @@ pub fn styled_player_action_button_text(
             TextStyle {
                 font: font_assets.font.clone(),
                 font_size: 40.0,
-                color: TEXT_COLOR,
+                color: global::TEXT_COLOR,
             },
             Default::default(),
         ),

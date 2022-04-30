@@ -1,6 +1,5 @@
-use crate::{button_system, FontAssets, ImageAssets, Player, Stats, NORMAL_BUTTON};
+use crate::{button_system, despawn_screen, global, FontAssets, ImageAssets};
 
-use super::{despawn_screen, GameState, TEXT_COLOR};
 use bevy::{prelude::*, window::WindowMode};
 
 pub struct MainMenuPlugin;
@@ -8,9 +7,11 @@ pub struct MainMenuPlugin;
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {
         app.add_state(MenuState::Main)
-            .add_system_set(SystemSet::on_enter(GameState::MainMenu).with_system(main_menu_setup))
             .add_system_set(
-                SystemSet::on_update(GameState::MainMenu)
+                SystemSet::on_enter(global::GameState::MainMenu).with_system(main_menu_setup),
+            )
+            .add_system_set(
+                SystemSet::on_update(global::GameState::MainMenu)
                     .with_system(menu_action)
                     .with_system(button_system),
             )
@@ -18,7 +19,7 @@ impl Plugin for MainMenuPlugin {
             .add_system(change_window_settings) // TODO: settings screen..
             // When exiting the state, despawn everything that was spawned for this screen
             .add_system_set(
-                SystemSet::on_exit(GameState::MainMenu)
+                SystemSet::on_exit(global::GameState::MainMenu)
                     .with_system(despawn_screen::<MainMenuScreen>),
             );
     }
@@ -85,7 +86,7 @@ fn main_menu_setup(
         // font: Default::default(),
         font: font_assets.font.clone(),
         font_size: 40.0,
-        color: TEXT_COLOR,
+        color: global::TEXT_COLOR,
     };
 
     // Button panel
@@ -108,7 +109,7 @@ fn main_menu_setup(
             // Display start game button
             p.spawn_bundle(ButtonBundle {
                 style: button_style.clone(),
-                color: NORMAL_BUTTON.into(),
+                color: global::NORMAL_BUTTON.into(),
                 ..default()
             })
             .insert(MenuButtonAction::Play)
@@ -133,17 +134,17 @@ fn menu_action(
         (Changed<Interaction>, With<Button>),
     >,
     mut menu_state: ResMut<State<MenuState>>,
-    mut game_state: ResMut<State<GameState>>,
-    mut player: ResMut<Player>,
+    mut game_state: ResMut<State<global::GameState>>,
+    mut player: ResMut<global::Player>,
     image_assets: Res<ImageAssets>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         if *interaction == Interaction::Clicked {
             match menu_button_action {
                 MenuButtonAction::Play => {
-                    game_state.set(GameState::Overworld).unwrap();
+                    game_state.set(global::GameState::Overworld).unwrap();
                     menu_state.set(MenuState::Disabled).unwrap();
-                    player.stats = Stats::new(image_assets.player_battle.clone());
+                    player.stats = global::Stats::new(image_assets.player_battle.clone());
                 }
                 _ => unimplemented!("Unhandled menu button action!!"), // TODO
             }

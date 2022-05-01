@@ -5,6 +5,7 @@ use queues::*;
 pub use styles::*;
 
 use bevy::prelude::*;
+use rand::prelude::*;
 
 pub struct BattlePlugin;
 
@@ -336,9 +337,8 @@ fn calculate_player_attack_damage(
         1.5 * player.stats.strength as f32
     };
 
-    // TODO: elemental modifier
     // Apply elemental modifier.
-    // power = power * elemental_modifier(attack_element, enemy.enemy_stats.element);
+    power = power * element_modifier(&attack.element, &enemy.enemy_stats.element);
 
     // Get damage reduction.
     let mut damage_reduction =
@@ -350,6 +350,26 @@ fn calculate_player_attack_damage(
     (power - damage_reduction).round() as i32
 }
 
+fn element_modifier(attack: &Option<global::Element>, receiver: &Option<global::Element>) -> f32 {
+    if attack.is_none() || receiver.is_none() {
+        return 1.0;
+    }
+
+    let (attack, receiver) = (attack.clone().unwrap(), receiver.clone().unwrap());
+    use global::Element::*;
+    match (&attack, &receiver) {
+        (Water, Fire)
+        | (Fire, Earth)
+        | (Earth, Electric)
+        | (Electric, Water)
+        | (Dark, Light)
+        | (Light, Dark) => 2.0,
+        (Fire, Water) | (Earth, Fire) | (Electric, Earth) | (Water, Electric) => 0.5,
+        _ if &attack == &receiver => -1.0,
+        _ => 1.0,
+    }
+}
+
 fn enemy_attack_setup(
     mut set: ParamSet<(
         Query<&mut Text, With<HealthText>>,
@@ -357,18 +377,23 @@ fn enemy_attack_setup(
     )>,
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
-    enemy: Res<global::Enemy>,
+    mut enemy: ResMut<global::Enemy>,
     player_action: Res<PlayerBattleAction>,
 ) {
-    // TODO: make sure enemy has enough mp
-    // TODO: deduct enemy mp
-    // TODO: pick random attack
-    let attack = &enemy.attacks[0];
+    // Pick attack as long as there is mp available.
+    let mut rng = thread_rng();
+    let mut attack_index = rng.gen_range(0..enemy.attacks.len());
+    while enemy.attacks[attack_index].mp_use > enemy.stats.mp {
+        attack_index = rng.gen_range(0..enemy.attacks.len());
+    }
+    let attack = enemy.attacks[attack_index].clone();
 
     let damage = calculate_enemy_attack_damage(&attack, &enemy, &player, player_action.block);
 
     let mut player = &mut player.stats;
     player.hp = std::cmp::min(std::cmp::max(0, player.hp - damage), player.hp_max);
+
+    enemy.stats.mp -= attack.mp_use;
 
     let _ = announcement.texts.add(format!(
         "{} used {}, dealing {} damage to you!",

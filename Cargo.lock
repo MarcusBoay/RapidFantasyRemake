@@ -2460,6 +2460,7 @@ dependencies = [
  "bevy",
  "bevy_asset_loader",
  "queues",
+ "rand",
 ]
 
 [[package]]

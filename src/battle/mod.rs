@@ -12,6 +12,7 @@ impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
         app.add_state(BattleState::Initialization)
             .init_resource::<Announcement>()
+            .init_resource::<PlayerBattleAction>()
             .add_system_set(
                 SystemSet::on_enter(global::GameState::Battle).with_system(battle_setup),
             )
@@ -66,12 +67,20 @@ enum BattleState {
     Deinitialize,
     // maybe magic menu state?
 }
+
 #[derive(Component, Debug, Clone)]
 pub enum PlayerButtonAction {
     Attack,
     Magic,
     Block,
     Item,
+}
+
+#[derive(Default)]
+struct PlayerBattleAction {
+    attack: Option<global::PlayerAttack>,
+    block: bool,
+    // item: Option<Item>
 }
 
 #[derive(Component)]
@@ -213,10 +222,18 @@ fn idle_init(
     font_assets: Res<FontAssets>,
     announcement: Res<Announcement>,
     mut announcement_text: Query<&mut Text>,
+    mut player_battle_action: ResMut<PlayerBattleAction>,
 ) {
     *announcement_text
         .get_mut(announcement.entity.unwrap())
         .unwrap() = Text::with_section("", common_text_style(&font_assets), Default::default());
+
+    // Reset player battle actions.
+    player_battle_action.attack = None;
+    player_battle_action.block = false;
+    // player_battle_action.item = None;
+
+    // TODO: change text 'Attack' to 'Limit Break'
 }
 
 fn battle_action(
@@ -225,11 +242,24 @@ fn battle_action(
         (Changed<Interaction>, With<Button>),
     >,
     mut battle_state: ResMut<State<BattleState>>,
+    mut player_battle_action: ResMut<PlayerBattleAction>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         if *interaction == Interaction::Clicked {
             match menu_button_action {
-                PlayerButtonAction::Attack => battle_state.set(BattleState::PlayerAttack).unwrap(),
+                PlayerButtonAction::Attack => {
+                    battle_state.set(BattleState::PlayerAttack).unwrap();
+
+                    // TODO: switch between attack and limit break
+                    // TODO: get attack from player attack inventory...
+                    player_battle_action.attack = Some(global::PlayerAttack {
+                        name: "Tackle".to_string(),
+                        attack_type: None,
+                        element: None,
+                        mp_use: 0,
+                        tier: 1,
+                    });
+                }
                 _ => unimplemented!("Unhandled player action button!!"), // TODO
             }
         }
@@ -240,17 +270,67 @@ fn player_attack_setup(
     mut announcement: ResMut<Announcement>,
     player: Res<global::Player>,
     mut enemy: ResMut<global::Enemy>,
+    player_action: Res<PlayerBattleAction>,
 ) {
-    // TODO: update player MP if needed...
-    // TODO: calculate damage
-    let damage = player.stats.strength;
+    if let Some(attack) = &player_action.attack {
+        // Get attack power.
+        let mut power = if let Some(global::PlayerAttackType::Limit) = attack.attack_type {
+            match attack.tier {
+                3 => 120. + 2.5 * player.stats.strength as f32,
+                2 => 80. + 2.0 * player.stats.strength as f32,
+                1 | _ => 40. + 1.5 * player.stats.strength as f32,
+            }
+        } else if let Some(global::PlayerAttackType::Magic) = attack.attack_type {
+            match attack.tier {
+                3 => 45. + 1.2 * player.stats.wisdom as f32,
+                2 => 15. + 1.0 * player.stats.wisdom as f32,
+                1 | _ => 5. + 0.8 * player.stats.wisdom as f32,
+            }
+        } else {
+            // Normal attack
+            1.5 * player.stats.strength as f32
+        };
 
-    enemy.stats.hp -= damage;
-    println!("enemy hp: {}", enemy.stats.hp); // TODO: make enemy hp bar
+        // TODO: elemental modifier
+        // Apply elemental modifier.
+        // power = power * elemental_modifier(attack_element, enemy.enemy_stats.element);
 
-    let _ = announcement
-        .texts
-        .add(format!("You did {} damage to the enemy!", damage));
+        // Get damage reduction.
+        let mut damage_reduction =
+            enemy.stats.defense as f32 + enemy.stats.defense as f32 / 300. * power as f32;
+        if let Some(global::PlayerAttackType::Magic) = attack.attack_type {
+            damage_reduction *= 0.2;
+        }
+
+        let damage = (power - damage_reduction).round() as i32;
+
+        enemy.stats.hp = std::cmp::min(
+            std::cmp::max(0, enemy.stats.hp - damage),
+            enemy.stats.hp_max,
+        );
+
+        // TODO: check which type of attack is used
+        // TODO: deduct limit
+        // TODO: deduct magic use
+        // TODO: ensure there is mp to use magic...
+
+        println!("enemy hp: {}", enemy.stats.hp); // TODO: make enemy hp bar
+
+        let announcement_text = if damage >= 0 {
+            format!("You used {}, dealing {} damage!", attack.name, damage)
+        } else {
+            format!(
+                "You used {}, healing {} to the enemy!",
+                attack.name,
+                damage * -1
+            )
+        };
+
+        let _ = announcement.texts.add(announcement_text);
+    }
+
+    // TODO: handle block
+    // TODO: handle use item
 }
 
 fn enemy_attack_setup(
@@ -297,6 +377,9 @@ fn win_setup(
 
     // Level up
     player.experience += enemy.stats.experience;
+    let _ = announcement
+        .texts
+        .add(format!("You gained {} experience!", enemy.stats.experience));
     if player.level < 5 && player.experience >= global::XP_TABLE[player.level as usize - 1] {
         player.experience %= global::XP_TABLE[player.level as usize - 1];
         player.level += 1;

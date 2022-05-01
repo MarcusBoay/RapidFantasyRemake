@@ -46,13 +46,27 @@ pub(crate) struct Stats {
     pub(crate) battle_sprite: Handle<Image>,
 }
 
+pub(crate) enum PlayerAttackType {
+    Limit,
+    Magic,
+}
+
+#[derive(Default)]
+pub(crate) struct PlayerAttack {
+    pub(crate) name: String,
+    pub(crate) attack_type: Option<PlayerAttackType>, // None = standard attack
+    pub(crate) element: Option<Element>,              // None = no type
+    pub(crate) mp_use: i32,
+    pub(crate) tier: u8,
+}
+
 impl Stats {
     pub(crate) fn new(battle_sprite: Handle<Image>) -> Self {
         Stats {
-            hp_max: 50,
-            mp_max: 50,
-            hp: 50,
-            mp: 50,
+            hp_max: 100,
+            mp_max: 100,
+            hp: 100,
+            mp: 100,
             strength: 12,
             wisdom: 12,
             defense: 5,

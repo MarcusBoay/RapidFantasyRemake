@@ -37,6 +37,7 @@ fn overworld_setup(
     image_assets: Res<ImageAssets>,
     mut player: ResMut<global::Player>,
 ) {
+    // HACK: This is here because we need ImageAssets to be initialized...
     commands.init_resource::<global::EnemyTable>();
 
     // Overworld

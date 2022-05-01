@@ -23,9 +23,9 @@ impl Plugin for BattlePlugin {
             .add_system_set(SystemSet::on_enter(BattleState::Idle).with_system(idle_init))
             .add_system_set(
                 SystemSet::on_update(BattleState::Idle)
-                    .with_system(show_player_action_container)
-                    .with_system(battle_action)
-                    .with_system(button_system),
+                    .with_system(show_action_menu)
+                    .with_system(button_system)
+                    .with_system(action_menu_button_action), // .with_system(magic_menu_button_action)
             )
             .add_system_set(
                 SystemSet::on_exit(BattleState::Idle).with_system(hide_player_action_container),
@@ -88,10 +88,25 @@ struct PlayerBattleAction {
 struct PlayerActionContainer;
 
 #[derive(Component)]
+struct ActionMenu;
+
+#[derive(Component)]
+struct MagicMenu;
+
+#[derive(Component)]
 struct HealthText;
 
 #[derive(Component)]
 struct HealthBar;
+
+#[derive(Component)]
+struct ManaText;
+
+#[derive(Component)]
+struct ManaBar;
+
+#[derive(Component)]
+struct LimitBar;
 
 #[derive(Default)]
 struct Announcement {
@@ -109,9 +124,8 @@ fn battle_setup(
     mut battle_state: ResMut<State<BattleState>>,
     mut announcement: ResMut<Announcement>,
 ) {
-    let player = &player.stats;
-    let hp_perc = player.hp as f32 / player.hp_max as f32 * 100.;
-    let mp_perc = player.mp as f32 / player.mp_max as f32 * 100.;
+    let hp_perc = player.stats.hp as f32 / player.stats.hp_max as f32 * 100.;
+    let mp_perc = player.stats.mp as f32 / player.stats.mp_max as f32 * 100.;
 
     let enemy_sprite = enemy.stats.battle_sprite.clone();
     let enemy_name = enemy.enemy_stats.name.clone();
@@ -135,8 +149,8 @@ fn battle_setup(
                                 .with_children(|p| {
                                     p.spawn_bundle(styled_player_hp_text(
                                         &font_assets,
-                                        player.hp,
-                                        player.hp_max,
+                                        player.stats.hp,
+                                        player.stats.hp_max,
                                     ))
                                     .insert(HealthText);
                                     p.spawn_bundle(styled_player_hp_bar_container())
@@ -150,12 +164,14 @@ fn battle_setup(
                                 .with_children(|p| {
                                     p.spawn_bundle(styled_player_mp_text(
                                         &font_assets,
-                                        player.mp,
-                                        player.mp_max,
-                                    ));
+                                        player.stats.mp,
+                                        player.stats.mp_max,
+                                    ))
+                                    .insert(ManaText);
                                     p.spawn_bundle(styled_player_mp_bar_container())
                                         .with_children(|p| {
-                                            p.spawn_bundle(styled_player_mp_bar(mp_perc));
+                                            p.spawn_bundle(styled_player_mp_bar(mp_perc))
+                                                .insert(ManaBar);
                                         });
                                 });
 
@@ -164,7 +180,10 @@ fn battle_setup(
                                     p.spawn_bundle(styled_player_limit_break_text(&font_assets));
                                     p.spawn_bundle(styled_player_limit_break_bar_container())
                                         .with_children(|p| {
-                                            p.spawn_bundle(styled_player_limit_break_bar());
+                                            p.spawn_bundle(styled_player_limit_break_bar(
+                                                player.limit,
+                                            ))
+                                            .insert(LimitBar);
                                         });
                                 });
                         });
@@ -172,21 +191,27 @@ fn battle_setup(
                     p.spawn_bundle(styled_player_action_container())
                         .insert(PlayerActionContainer)
                         .with_children(|p| {
-                            for player_button_action in [
-                                PlayerButtonAction::Attack,
-                                PlayerButtonAction::Magic,
-                                PlayerButtonAction::Block,
-                                PlayerButtonAction::Item,
-                            ] {
-                                p.spawn_bundle(styled_player_action_button())
-                                    .insert(player_button_action.clone())
-                                    .with_children(|p| {
-                                        p.spawn_bundle(styled_player_action_button_text(
-                                            &player_button_action,
-                                            &font_assets,
-                                        ));
-                                    });
-                            }
+                            p.spawn_bundle(styled_player_action_button_container())
+                                .insert(ActionMenu)
+                                .with_children(|p| {
+                                    for player_button_action in [
+                                        PlayerButtonAction::Attack,
+                                        PlayerButtonAction::Magic,
+                                        PlayerButtonAction::Block,
+                                        PlayerButtonAction::Item,
+                                    ] {
+                                        p.spawn_bundle(styled_player_action_button())
+                                            .insert(player_button_action.clone())
+                                            .with_children(|p| {
+                                                p.spawn_bundle(styled_player_action_button_text(
+                                                    &player_button_action,
+                                                    &font_assets,
+                                                ));
+                                            });
+                                    }
+                                });
+                            // p.spawn_bundle(styled_player_magic_menu_container())
+                            //     .insert(MagicMenu);
                         });
                 });
 
@@ -200,7 +225,7 @@ fn battle_setup(
 
             p.spawn_bundle(styled_battle_images_container())
                 .with_children(|p| {
-                    p.spawn_bundle(styled_battle_portrait(player.battle_sprite.clone()));
+                    p.spawn_bundle(styled_battle_portrait(player.stats.battle_sprite.clone()));
                     p.spawn_bundle(styled_battle_portrait(enemy_sprite));
                 });
         });
@@ -237,13 +262,16 @@ fn idle_init(
     // TODO: change text 'Attack' to 'Limit Break'
 }
 
-fn battle_action(
+fn action_menu_button_action(
     interaction_query: Query<
         (&Interaction, &PlayerButtonAction),
         (Changed<Interaction>, With<Button>),
     >,
     mut battle_state: ResMut<State<BattleState>>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
+    player: Res<global::Player>,
+    player_limit: Res<global::PlayerLimitEquipped>,
+    player_attack_table: Res<global::PlayerAttackTable>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         if *interaction == Interaction::Clicked {
@@ -251,33 +279,78 @@ fn battle_action(
                 PlayerButtonAction::Attack => {
                     battle_state.set(BattleState::PlayerAction).unwrap();
 
-                    // TODO: switch between attack and limit break
-                    // TODO: get attack from player attack inventory...
-                    player_battle_action.attack = Some(global::PlayerAttack {
-                        name: "Tackle".to_string(),
-                        attack_type: None,
-                        element: None,
-                        mp_use: 0,
-                        tier: 1,
-                    });
+                    // TODO: change text to 'Limit!'
+
+                    player_battle_action.attack = if player.limit == 100 {
+                        Some(player_limit.equipped.clone())
+                    } else {
+                        Some(player_attack_table.table.get(&0).unwrap().clone())
+                    };
                 }
                 PlayerButtonAction::Block => {
                     // TODO: block & use item
                     battle_state.set(BattleState::PlayerAction).unwrap();
                     player_battle_action.block = true;
                 }
+                // PlayerButtonAction::Magic => {
+                // set_visible_recursive(is_visible, entity, visible_query, children_query)
+                // }
                 _ => todo!("Unhandled player action button!!"), // TODO
             }
         }
     }
 }
 
+// fn magic_menu_button_action(
+//     interaction_query: Query<
+//         (&Interaction, &Magic),
+//         (Changed<Interaction>, With<Button>),
+//     >,
+//     mut battle_state: ResMut<State<BattleState>>,
+//     mut player_battle_action: ResMut<PlayerBattleAction>,
+// ) {
+//     for (interaction, menu_button_action) in interaction_query.iter() {
+//         if *interaction == Interaction::Clicked {
+//             match menu_button_action {
+//                 PlayerButtonAction::Attack => {
+//                     battle_state.set(BattleState::PlayerAction).unwrap();
+
+//                     // TODO: switch between attack and limit break
+//                     // TODO: get attack from player attack inventory...
+//                     player_battle_action.attack = Some(global::PlayerAttack {
+//                         name: "Tackle".to_string(),
+//                         attack_type: None,
+//                         element: None,
+//                         mp_use: 0,
+//                         tier: 1,
+//                     });
+//                 }
+//                 PlayerButtonAction::Block => {
+//                     // TODO: block & use item
+//                     battle_state.set(BattleState::PlayerAction).unwrap();
+//                     player_battle_action.block = true;
+//                 }
+//                 PlayerButtonAction::Magic => {
+//                     // set_visible_recursive(is_visible, entity, visible_query, children_query)
+//                 }
+//                 _ => todo!("Unhandled player action button!!"), // TODO
+//             }
+//         }
+//     }
+// }
+
 fn player_attack_setup(
+    mut set: ParamSet<(
+        Query<&mut Text, With<ManaText>>,
+        Query<&mut Style, With<ManaBar>>,
+        Query<&mut Style, With<LimitBar>>,
+    )>,
     mut announcement: ResMut<Announcement>,
-    player: Res<global::Player>,
+    mut player: ResMut<global::Player>,
     mut enemy: ResMut<global::Enemy>,
     player_action: Res<PlayerBattleAction>,
 ) {
+    // TODO: ensure there is mp to use magic...
     if let Some(attack) = &player_action.attack {
         let damage = calculate_player_attack_damage(&attack, &player, &enemy);
 
@@ -286,10 +359,15 @@ fn player_attack_setup(
             enemy.stats.hp_max,
         );
 
-        // TODO: check which type of attack is used
-        // TODO: deduct limit
-        // TODO: deduct magic use
-        // TODO: ensure there is mp to use magic...
+        if let Some(global::PlayerAttackType::Limit) = &attack.attack_type {
+            player.limit = 0;
+            for mut limit_bar in set.p2().iter_mut() {
+                limit_bar.size = Size::new(Val::Percent(0.), Val::Percent(100.));
+                // TODO: color change
+            }
+        }
+
+        player.stats.mp -= attack.mp_use;
 
         println!("enemy hp: {}", enemy.stats.hp); // TODO: make enemy hp bar
 
@@ -304,6 +382,16 @@ fn player_attack_setup(
         };
 
         let _ = announcement.texts.add(announcement_text);
+
+        let player = &player.stats;
+        for mut mp_text in set.p0().iter_mut() {
+            mp_text.sections[1].value = format!("{} / {}", player.mp, player.mp_max);
+        }
+
+        let player_mp_perc = player.mp as f32 / player.mp_max as f32 * 100.;
+        for mut mp_bar in set.p1().iter_mut() {
+            mp_bar.size = Size::new(Val::Percent(player_mp_perc), Val::Percent(100.));
+        }
     }
 
     if player_action.block {
@@ -374,6 +462,7 @@ fn enemy_attack_setup(
     mut set: ParamSet<(
         Query<&mut Text, With<HealthText>>,
         Query<&mut Style, With<HealthBar>>,
+        Query<&mut Style, With<LimitBar>>,
     )>,
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
@@ -390,8 +479,18 @@ fn enemy_attack_setup(
 
     let damage = calculate_enemy_attack_damage(&attack, &enemy, &player, player_action.block);
 
-    let mut player = &mut player.stats;
-    player.hp = std::cmp::min(std::cmp::max(0, player.hp - damage), player.hp_max);
+    let limit_addition = (200. * (damage as f32) / (player.stats.hp_max as f32)) as f32;
+    let new_limit = player.limit as f32 + limit_addition;
+    player.limit = if new_limit < 100. {
+        new_limit as u8
+    } else {
+        100
+    };
+
+    player.stats.hp = std::cmp::min(
+        std::cmp::max(0, player.stats.hp - damage),
+        player.stats.hp_max,
+    );
 
     enemy.stats.mp -= attack.mp_use;
 
@@ -402,12 +501,17 @@ fn enemy_attack_setup(
 
     // TODO: maybe put these into another system with Changed<> query filter...
     for mut health_text in set.p0().iter_mut() {
-        health_text.sections[1].value = format!("{} / {}", player.hp, player.hp_max);
+        health_text.sections[1].value = format!("{} / {}", player.stats.hp, player.stats.hp_max);
     }
 
-    let player_hp_perc = player.hp as f32 / player.hp_max as f32 * 100.;
+    let player_hp_perc = player.stats.hp as f32 / player.stats.hp_max as f32 * 100.;
     for mut health_bar in set.p1().iter_mut() {
         health_bar.size = Size::new(Val::Percent(player_hp_perc), Val::Percent(100.));
+    }
+
+    for mut limit in set.p2().iter_mut() {
+        limit.size = Size::new(Val::Percent(player.limit as f32), Val::Percent(100.));
+        // TODO: color change
     }
 }
 
@@ -554,10 +658,23 @@ fn hide_player_action_container(
     );
 }
 
-fn show_player_action_container(
+// fn show_player_action_container(
+//     children_query: Query<&Children>,
+//     mut visible_query: Query<&mut Visibility>,
+//     entity_vis: Query<Entity, With<PlayerActionContainer>>,
+// ) {
+//     set_visible_recursive(
+//         true,
+//         entity_vis.single(),
+//         &mut visible_query,
+//         &children_query,
+//     );
+// }
+
+fn show_action_menu(
     children_query: Query<&Children>,
     mut visible_query: Query<&mut Visibility>,
-    entity_vis: Query<Entity, With<PlayerActionContainer>>,
+    entity_vis: Query<Entity, With<ActionMenu>>,
 ) {
     set_visible_recursive(
         true,

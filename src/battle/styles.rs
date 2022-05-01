@@ -164,10 +164,10 @@ pub fn styled_player_limit_break_bar_container() -> NodeBundle {
     }
 }
 
-pub fn styled_player_limit_break_bar() -> NodeBundle {
+pub fn styled_player_limit_break_bar(limit: u8) -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(62.), Val::Percent(100.)), // TODO: update width based on limit break value
+            size: Size::new(Val::Percent(limit as f32), Val::Percent(100.)), // TODO: update width based on limit break value
             ..default()
         },
         color: Color::ORANGE.into(), // TODO: update color based on limit break value
@@ -180,6 +180,18 @@ pub fn styled_player_action_container() -> NodeBundle {
         style: Style {
             size: Size::new(Val::Percent(70.), Val::Percent(92.)),
             margin: Rect::all(Val::Percent(1.)),
+            flex_direction: FlexDirection::Row,
+            ..default()
+        },
+        visibility: Visibility { is_visible: false },
+        ..default()
+    }
+}
+
+pub fn styled_player_action_button_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(30.), Val::Percent(100.)),
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
@@ -199,6 +211,19 @@ pub fn styled_player_action_button() -> ButtonBundle {
         },
         visibility: Visibility { is_visible: false },
         color: global::NORMAL_BUTTON.into(),
+        ..default()
+    }
+}
+
+pub fn styled_player_magic_menu_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(70.), Val::Percent(100.)),
+            flex_direction: FlexDirection::ColumnReverse,
+            ..default()
+        },
+        visibility: Visibility { is_visible: false },
+        color: Color::CRIMSON.into(),
         ..default()
     }
 }

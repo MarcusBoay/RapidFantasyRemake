@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::HashMap};
 
 use crate::{
-    global::{Element, EnemyAttack, EnemyAttackType, EnemyStats, EnemyTable, Stats},
+    global::{Element::*, EnemyAttack, EnemyAttackType::*, EnemyStats, EnemyTable, Stats},
     ImageAssets,
 };
 
@@ -43,7 +43,7 @@ impl FromWorld for EnemyTable {
                     id: 1,
                     name: "Rocky".to_string(),
                     description: "He\'s a bit of a blockhead.".to_string(),
-                    element: Some(Element::Earth),
+                    element: Some(Earth),
                     next_phase: None,
                 },
                 Stats {
@@ -70,7 +70,7 @@ impl FromWorld for EnemyTable {
                     name: "Mushroom".to_string(),
                     description: "Shrooms will mess you up, that\'s why they\'re illegal."
                         .to_string(),
-                    element: Some(Element::Earth),
+                    element: Some(Earth),
                     next_phase: None,
                 },
                 Stats {
@@ -87,7 +87,7 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy3.clone(),
                 },
                 vec![
-                    EnemyAttack::new("Hallucinate", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Hallucinate", 2., Some(Magic), 5),
                     EnemyAttack::new("Spores", 2.5, None, 0),
                 ],
             ),
@@ -99,7 +99,7 @@ impl FromWorld for EnemyTable {
                     id: 3,
                     name: "Duck".to_string(),
                     description: "He\'s a blast in the bath!".to_string(),
-                    element: Some(Element::Fire),
+                    element: Some(Fire),
                     next_phase: None,
                 },
                 Stats {
@@ -117,7 +117,7 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Tackle", 2., None, 0),
-                    EnemyAttack::new("Explosion", 3., Some(EnemyAttackType::Magic), 4),
+                    EnemyAttack::new("Explosion", 3., Some(Magic), 4),
                 ],
             ),
         );
@@ -128,7 +128,7 @@ impl FromWorld for EnemyTable {
                     id: 4,
                     name: "Triple A battery".to_string(),
                     description: "Nobody likes triple A batteries.".to_string(),
-                    element: Some(Element::Electric),
+                    element: Some(Electric),
                     next_phase: None,
                 },
                 Stats {
@@ -146,7 +146,7 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Hit", 2., None, 0),
-                    EnemyAttack::new("Spark", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Spark", 2., Some(Magic), 5),
                 ],
             ),
         );
@@ -157,7 +157,7 @@ impl FromWorld for EnemyTable {
                     id: 5,
                     name: "Skeleton".to_string(),
                     description: "Never skip leg day.".to_string(),
-                    element: Some(Element::Dark),
+                    element: Some(Dark),
                     next_phase: None,
                 },
                 Stats {
@@ -175,7 +175,7 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Bone Crush", 2., None, 0),
-                    EnemyAttack::new("Curse", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Curse", 2., Some(Magic), 5),
                 ],
             ),
         );
@@ -186,7 +186,7 @@ impl FromWorld for EnemyTable {
                     id: 6,
                     name: "Mixtape".to_string(),
                     description: "An underappreciated mixtape, spits straight fire.".to_string(),
-                    element: Some(Element::Fire),
+                    element: Some(Fire),
                     next_phase: None,
                 },
                 Stats {
@@ -203,8 +203,8 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy7.clone(),
                 },
                 vec![
-                    EnemyAttack::new("Drop The Beat", 2., Some(EnemyAttackType::Magic), 7),
-                    EnemyAttack::new("Lay A Verse", 1.8, Some(EnemyAttackType::Magic), 4),
+                    EnemyAttack::new("Drop The Beat", 2., Some(Magic), 7),
+                    EnemyAttack::new("Lay A Verse", 1.8, Some(Magic), 4),
                     EnemyAttack::new("Tangle", 2., None, 0),
                 ],
             ),
@@ -235,7 +235,7 @@ impl FromWorld for EnemyTable {
                 vec![
                     EnemyAttack::new("Bite", 2., None, 0),
                     EnemyAttack::new("Gnaw", 1.5, None, 0),
-                    EnemyAttack::new("Acornucopia of pain", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Acornucopia of pain", 2., Some(Magic), 5),
                 ],
             ),
         );
@@ -246,7 +246,7 @@ impl FromWorld for EnemyTable {
                     id: 8,
                     name: "Book".to_string(),
                     description: "Full of questionable knowledge.".to_string(),
-                    element: Some(Element::Light),
+                    element: Some(Light),
                     next_phase: None,
                 },
                 Stats {
@@ -264,7 +264,7 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Body Slam", 2., None, 0),
-                    EnemyAttack::new("Confusion", 2., Some(EnemyAttackType::Magic), 6),
+                    EnemyAttack::new("Confusion", 2., Some(Magic), 6),
                     EnemyAttack::new("Face the Book", 2.2, None, 0),
                 ],
             ),
@@ -276,7 +276,7 @@ impl FromWorld for EnemyTable {
                     id: 9,
                     name: "Battery Rat".to_string(),
                     description: "This enemy seems familiar...".to_string(),
-                    element: Some(Element::Electric),
+                    element: Some(Electric),
                     next_phase: None,
                 },
                 Stats {
@@ -294,8 +294,8 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Thunder Punch", 2., None, 0),
-                    EnemyAttack::new("Thunder Shock", 2., Some(EnemyAttackType::Magic), 10),
-                    EnemyAttack::new("Thunder Wave", 1.8, Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Thunder Shock", 2., Some(Magic), 10),
+                    EnemyAttack::new("Thunder Wave", 1.8, Some(Magic), 5),
                 ],
             ),
         );
@@ -306,7 +306,7 @@ impl FromWorld for EnemyTable {
                     id: 10,
                     name: "Penguin".to_string(),
                     description: "Noot Noot!".to_string(),
-                    element: Some(Element::Water),
+                    element: Some(Water),
                     next_phase: None,
                 },
                 Stats {
@@ -323,7 +323,7 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy11.clone(),
                 },
                 vec![
-                    EnemyAttack::new("Water Gun", 2., Some(EnemyAttackType::Magic), 8),
+                    EnemyAttack::new("Water Gun", 2., Some(Magic), 8),
                     EnemyAttack::new("Doot Doot", 2., None, 0),
                     EnemyAttack::new("Peck", 1.8, None, 0),
                 ],
@@ -336,7 +336,7 @@ impl FromWorld for EnemyTable {
                     id: 11,
                     name: "Emperor Penguin".to_string(),
                     description: "".to_string(),
-                    element: Some(Element::Fire),
+                    element: Some(Fire),
                     next_phase: Some(13),
                 },
                 Stats {
@@ -354,9 +354,9 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Wing", 2., None, 0),
-                    EnemyAttack::new("Ignition", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Ignition", 2., Some(Magic), 5),
                     EnemyAttack::new("Peck", 2.2, None, 0),
-                    EnemyAttack::new("Flamethrower", 2.2, Some(EnemyAttackType::Magic), 12),
+                    EnemyAttack::new("Flamethrower", 2.2, Some(Magic), 12),
                 ],
             ),
         );
@@ -367,7 +367,7 @@ impl FromWorld for EnemyTable {
                     id: 12,
                     name: "Emperor Penguin".to_string(),
                     description: "".to_string(),
-                    element: Some(Element::Electric),
+                    element: Some(Electric),
                     next_phase: Some(14),
                 },
                 Stats {
@@ -385,9 +385,9 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Static Peck", 2., None, 0),
-                    EnemyAttack::new("Shock Volt", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Shock Volt", 2., Some(Magic), 5),
                     EnemyAttack::new("Tesla Contact", 2.2, None, 0),
-                    EnemyAttack::new("Monarch\'s Thunder", 2.2, Some(EnemyAttackType::Magic), 7),
+                    EnemyAttack::new("Monarch\'s Thunder", 2.2, Some(Magic), 7),
                 ],
             ),
         );
@@ -398,7 +398,7 @@ impl FromWorld for EnemyTable {
                     id: 13,
                     name: "Emperor Penguin".to_string(),
                     description: "".to_string(),
-                    element: Some(Element::Water),
+                    element: Some(Water),
                     next_phase: None,
                 },
                 Stats {
@@ -416,8 +416,8 @@ impl FromWorld for EnemyTable {
                 },
                 vec![
                     EnemyAttack::new("Frigid Onslaught", 2.5, None, 0),
-                    EnemyAttack::new("Tsunami", 2.5, Some(EnemyAttackType::Magic), 7),
-                    EnemyAttack::new("Royal Decree", 0.5, Some(EnemyAttackType::Percentile), 30),
+                    EnemyAttack::new("Tsunami", 2.5, Some(Magic), 7),
+                    EnemyAttack::new("Royal Decree", 0.5, Some(Percentile), 30),
                 ],
             ),
         );

@@ -29,6 +29,7 @@ pub(crate) struct Player {
     pub(crate) x: f32,
     pub(crate) y: f32,
     pub(crate) stats: Stats,
+    pub(crate) limit: u8,
 }
 
 #[derive(Component, Clone, Default)]
@@ -46,18 +47,62 @@ pub(crate) struct Stats {
     pub(crate) battle_sprite: Handle<Image>,
 }
 
+#[derive(Clone)]
 pub(crate) enum PlayerAttackType {
     Limit,
     Magic,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub(crate) struct PlayerAttack {
+    pub(crate) id: usize,
     pub(crate) name: String,
     pub(crate) attack_type: Option<PlayerAttackType>, // None = standard attack
     pub(crate) element: Option<Element>,              // None = no type
     pub(crate) mp_use: i32,
     pub(crate) tier: u8,
+}
+
+impl PlayerAttack {
+    pub(crate) fn new(
+        id: usize,
+        name: &str,
+        attack_type: Option<PlayerAttackType>,
+        element: Option<Element>,
+        mp_use: i32,
+        tier: u8,
+    ) -> Self {
+        PlayerAttack {
+            id,
+            name: name.to_string(),
+            attack_type,
+            element,
+            mp_use,
+            tier,
+        }
+    }
+}
+
+pub(crate) struct PlayerAttackTable {
+    pub(crate) table: HashMap<u32, PlayerAttack>,
+}
+
+#[derive(Default)]
+pub(crate) struct PlayerMagicEquipped {
+    pub(crate) equipped: [Option<PlayerAttack>; 4],
+}
+
+pub(crate) struct PlayerLimitEquipped {
+    pub(crate) equipped: PlayerAttack,
+}
+
+impl FromWorld for PlayerLimitEquipped {
+    fn from_world(world: &mut World) -> Self {
+        let attack_table = &world.get_resource_mut::<PlayerAttackTable>().unwrap().table;
+        PlayerLimitEquipped {
+            equipped: attack_table.get(&1).unwrap().clone(),
+        }
+    }
 }
 
 impl Stats {

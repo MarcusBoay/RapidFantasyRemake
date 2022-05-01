@@ -122,6 +122,22 @@ pub(crate) struct EnemyAttack {
     pub(crate) attack_type: Option<EnemyAttackType>, // None = Physical
 }
 
+impl EnemyAttack {
+    pub(crate) fn new(
+        name: &str,
+        damage_modifier: f32,
+        attack_type: Option<EnemyAttackType>,
+        mp_use: i32,
+    ) -> Self {
+        EnemyAttack {
+            name: name.to_string(),
+            damage_modifier,
+            attack_type,
+            mp_use,
+        }
+    }
+}
+
 pub(crate) struct EnemyTable {
     pub(crate) table: HashMap<u32, (EnemyStats, Stats, Vec<EnemyAttack>)>,
 }

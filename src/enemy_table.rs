@@ -33,12 +33,7 @@ impl FromWorld for EnemyTable {
                     gold: 50,
                     battle_sprite: image_assets.enemy1.clone(),
                 },
-                vec![EnemyAttack {
-                    name: "Bounce".to_string(),
-                    damage_modifier: 2.,
-                    mp_use: 0,
-                    attack_type: None,
-                }],
+                vec![EnemyAttack::new("Bounce", 2., None, 0)],
             ),
         );
         enemies.insert(
@@ -64,12 +59,7 @@ impl FromWorld for EnemyTable {
                     experience: 200,
                     battle_sprite: image_assets.enemy2.clone(),
                 },
-                vec![EnemyAttack {
-                    name: "Rock throw".to_string(),
-                    damage_modifier: 2.,
-                    mp_use: 0,
-                    attack_type: None,
-                }],
+                vec![EnemyAttack::new("Rock throw", 2., None, 0)],
             ),
         );
         enemies.insert(
@@ -97,18 +87,8 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy3.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Hallucinate".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 5,
-                    },
-                    EnemyAttack {
-                        name: "Spores".to_string(),
-                        damage_modifier: 2.5,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
+                    EnemyAttack::new("Hallucinate", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Spores", 2.5, None, 0),
                 ],
             ),
         );
@@ -136,18 +116,8 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy4.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Tackle".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Explosion".to_string(),
-                        damage_modifier: 3.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 4,
-                    },
+                    EnemyAttack::new("Tackle", 2., None, 0),
+                    EnemyAttack::new("Explosion", 3., Some(EnemyAttackType::Magic), 4),
                 ],
             ),
         );
@@ -175,18 +145,8 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy5.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Hit".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Spark".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 5,
-                    },
+                    EnemyAttack::new("Hit", 2., None, 0),
+                    EnemyAttack::new("Spark", 2., Some(EnemyAttackType::Magic), 5),
                 ],
             ),
         );
@@ -214,18 +174,8 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy6.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Bone Crush".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Curse".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 5,
-                    },
+                    EnemyAttack::new("Bone Crush", 2., None, 0),
+                    EnemyAttack::new("Curse", 2., Some(EnemyAttackType::Magic), 5),
                 ],
             ),
         );
@@ -253,24 +203,9 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy7.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Drop The Beat".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 7,
-                    },
-                    EnemyAttack {
-                        name: "Lay A Verse".to_string(),
-                        damage_modifier: 1.8,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 4,
-                    },
-                    EnemyAttack {
-                        name: "Tangle".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
+                    EnemyAttack::new("Drop The Beat", 2., Some(EnemyAttackType::Magic), 7),
+                    EnemyAttack::new("Lay A Verse", 1.8, Some(EnemyAttackType::Magic), 4),
+                    EnemyAttack::new("Tangle", 2., None, 0),
                 ],
             ),
         );
@@ -298,24 +233,9 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy8.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Bite".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Gnaw".to_string(),
-                        damage_modifier: 1.5,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Acornucopia of pain".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 5,
-                    },
+                    EnemyAttack::new("Bite", 2., None, 0),
+                    EnemyAttack::new("Gnaw", 1.5, None, 0),
+                    EnemyAttack::new("Acornucopia of pain", 2., Some(EnemyAttackType::Magic), 5),
                 ],
             ),
         );
@@ -343,24 +263,9 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy9.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Body Slam".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Confusion".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 6,
-                    },
-                    EnemyAttack {
-                        name: "Face the Book".to_string(),
-                        damage_modifier: 2.2,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
+                    EnemyAttack::new("Body Slam", 2., None, 0),
+                    EnemyAttack::new("Confusion", 2., Some(EnemyAttackType::Magic), 6),
+                    EnemyAttack::new("Face the Book", 2.2, None, 0),
                 ],
             ),
         );
@@ -388,24 +293,9 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy10.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Thunder Punch".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Thunder Shock".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 10,
-                    },
-                    EnemyAttack {
-                        name: "Thunder Wave".to_string(),
-                        damage_modifier: 1.8,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 5,
-                    },
+                    EnemyAttack::new("Thunder Punch", 2., None, 0),
+                    EnemyAttack::new("Thunder Shock", 2., Some(EnemyAttackType::Magic), 10),
+                    EnemyAttack::new("Thunder Wave", 1.8, Some(EnemyAttackType::Magic), 5),
                 ],
             ),
         );
@@ -433,24 +323,9 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy11.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Water Gun".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 8,
-                    },
-                    EnemyAttack {
-                        name: "Doot Doot".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Peck".to_string(),
-                        damage_modifier: 1.8,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
+                    EnemyAttack::new("Water Gun", 2., Some(EnemyAttackType::Magic), 8),
+                    EnemyAttack::new("Doot Doot", 2., None, 0),
+                    EnemyAttack::new("Peck", 1.8, None, 0),
                 ],
             ),
         );
@@ -478,30 +353,10 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy12.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Wing".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Ignition".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 5,
-                    },
-                    EnemyAttack {
-                        name: "Peck".to_string(),
-                        damage_modifier: 2.2,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Flamethrower".to_string(),
-                        damage_modifier: 2.2,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 12,
-                    },
+                    EnemyAttack::new("Wing", 2., None, 0),
+                    EnemyAttack::new("Ignition", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Peck", 2.2, None, 0),
+                    EnemyAttack::new("Flamethrower", 2.2, Some(EnemyAttackType::Magic), 12),
                 ],
             ),
         );
@@ -529,30 +384,10 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy13.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Static Peck".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Shock Volt".to_string(),
-                        damage_modifier: 2.,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 5,
-                    },
-                    EnemyAttack {
-                        name: "Tesla Contact".to_string(),
-                        damage_modifier: 2.2,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Monarch\'s Thunder".to_string(),
-                        damage_modifier: 2.2,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 7,
-                    },
+                    EnemyAttack::new("Static Peck", 2., None, 0),
+                    EnemyAttack::new("Shock Volt", 2., Some(EnemyAttackType::Magic), 5),
+                    EnemyAttack::new("Tesla Contact", 2.2, None, 0),
+                    EnemyAttack::new("Monarch\'s Thunder", 2.2, Some(EnemyAttackType::Magic), 7),
                 ],
             ),
         );
@@ -580,24 +415,9 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy14.clone(),
                 },
                 vec![
-                    EnemyAttack {
-                        name: "Frigid Onslaught".to_string(),
-                        damage_modifier: 2.5,
-                        attack_type: None,
-                        mp_use: 0,
-                    },
-                    EnemyAttack {
-                        name: "Tsunami".to_string(),
-                        damage_modifier: 2.5,
-                        attack_type: Some(EnemyAttackType::Magic),
-                        mp_use: 7,
-                    },
-                    EnemyAttack {
-                        name: "Royal Decree".to_string(),
-                        damage_modifier: 0.5,
-                        attack_type: Some(EnemyAttackType::Percentile),
-                        mp_use: 30,
-                    },
+                    EnemyAttack::new("Frigid Onslaught", 2.5, None, 0),
+                    EnemyAttack::new("Tsunami", 2.5, Some(EnemyAttackType::Magic), 7),
+                    EnemyAttack::new("Royal Decree", 0.5, Some(EnemyAttackType::Percentile), 30),
                 ],
             ),
         );

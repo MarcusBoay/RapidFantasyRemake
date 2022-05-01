@@ -147,12 +147,17 @@ fn spawn_monster(
 ) {
     if keyboard_input.just_pressed(KeyCode::P) {
         // TODO: random chance, area enemies
-        let enemy_stats = enemy_table.table.get("Slime").unwrap().0.clone();
-        let stats = enemy_table.table.get("Slime").unwrap().1.clone();
+        let spawned_enemy = enemy_table.table.get(&0).unwrap();
+        let (enemy_stats, stats, attacks) = (
+            spawned_enemy.0.clone(),
+            spawned_enemy.1.clone(),
+            spawned_enemy.2.clone(),
+        );
 
         enemy.entity = Some(commands.spawn().id());
         enemy.stats = stats;
         enemy.enemy_stats = enemy_stats;
+        enemy.attacks = attacks;
         game_state.set(global::GameState::Battle).unwrap();
     }
 }

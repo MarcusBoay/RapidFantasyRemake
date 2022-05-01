@@ -96,6 +96,7 @@ pub(crate) struct Enemy {
     pub(crate) entity: Option<Entity>,
     pub(crate) stats: Stats,
     pub(crate) enemy_stats: EnemyStats,
+    pub(crate) attacks: Vec<EnemyAttack>,
 }
 
 #[derive(Component, Clone, Default)]
@@ -107,6 +108,20 @@ pub(crate) struct EnemyStats {
     pub(crate) next_phase: Option<usize>, // id? maybe another enemystats?
 } // TODO: implement enemy table
 
+#[derive(Clone)]
+pub(crate) enum EnemyAttackType {
+    Magic,
+    Percentile,
+}
+
+#[derive(Default, Clone)]
+pub(crate) struct EnemyAttack {
+    pub(crate) name: String,
+    pub(crate) damage_modifier: f32,
+    pub(crate) mp_use: i32,
+    pub(crate) attack_type: Option<EnemyAttackType>, // None = Physical
+}
+
 pub(crate) struct EnemyTable {
-    pub(crate) table: HashMap<String, (EnemyStats, Stats)>, // TODO: maybe change this to an array?
+    pub(crate) table: HashMap<u32, (EnemyStats, Stats, Vec<EnemyAttack>)>,
 }

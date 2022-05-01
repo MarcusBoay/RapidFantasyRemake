@@ -1,7 +1,7 @@
 use bevy::{prelude::*, utils::HashMap};
 
 use crate::{
-    global::{EnemyStats, EnemyTable, Stats},
+    global::{EnemyAttack, EnemyAttackType, EnemyStats, EnemyTable, Stats},
     ImageAssets,
 };
 
@@ -10,13 +10,12 @@ impl FromWorld for EnemyTable {
         let image_assets = world.get_resource_mut::<ImageAssets>().unwrap();
         let mut enemies = HashMap::new();
 
-        let name = "Slime".to_string();
         enemies.insert(
-            name.clone(),
+            0,
             (
                 EnemyStats {
-                    id: enemies.len(),
-                    name: name.clone(),
+                    id: 0,
+                    name: "Slime".to_string(),
                     description: "I wonder if it\'s edible?".to_string(),
                     element: None,
                     next_phase: None,
@@ -28,15 +27,22 @@ impl FromWorld for EnemyTable {
                     mp: 10,
                     strength: 8,
                     wisdom: 8,
-                    defense: 8,
+                    defense: 5,
                     level: 1,
                     experience: 180,
                     gold: 50,
                     battle_sprite: image_assets.enemy1.clone(),
                 },
+                vec![EnemyAttack {
+                    name: "Bounce".to_string(),
+                    damage_modifier: 2.,
+                    mp_use: 0,
+                    attack_type: None,
+                }],
             ),
         );
         // TODO: add more enemies
+        // -> write python parser to easily convert data
 
         EnemyTable { table: enemies }
     }

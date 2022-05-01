@@ -30,16 +30,16 @@ impl Plugin for BattlePlugin {
                 SystemSet::on_exit(BattleState::Idle).with_system(hide_player_action_container),
             )
             .add_system_set(
-                SystemSet::on_enter(BattleState::PlayerAttack).with_system(player_attack_setup),
+                SystemSet::on_enter(BattleState::PlayerAction).with_system(player_attack_setup),
             )
             .add_system_set(
-                SystemSet::on_update(BattleState::PlayerAttack).with_system(battle_update),
+                SystemSet::on_update(BattleState::PlayerAction).with_system(battle_update),
             )
             .add_system_set(
-                SystemSet::on_enter(BattleState::EnemyAttack).with_system(enemy_attack_setup),
+                SystemSet::on_enter(BattleState::EnemyAction).with_system(enemy_attack_setup),
             )
             .add_system_set(
-                SystemSet::on_update(BattleState::EnemyAttack).with_system(battle_update),
+                SystemSet::on_update(BattleState::EnemyAction).with_system(battle_update),
             )
             .add_system_set(SystemSet::on_enter(BattleState::Win).with_system(win_setup))
             .add_system_set(SystemSet::on_update(BattleState::Win).with_system(battle_update))
@@ -60,8 +60,8 @@ struct BattleScreen;
 enum BattleState {
     Initialization,
     Idle,
-    PlayerAttack,
-    EnemyAttack,
+    PlayerAction,
+    EnemyAction,
     Win,
     Lose,
     Deinitialize,
@@ -248,7 +248,7 @@ fn battle_action(
         if *interaction == Interaction::Clicked {
             match menu_button_action {
                 PlayerButtonAction::Attack => {
-                    battle_state.set(BattleState::PlayerAttack).unwrap();
+                    battle_state.set(BattleState::PlayerAction).unwrap();
 
                     // TODO: switch between attack and limit break
                     // TODO: get attack from player attack inventory...
@@ -260,7 +260,12 @@ fn battle_action(
                         tier: 1,
                     });
                 }
-                _ => unimplemented!("Unhandled player action button!!"), // TODO
+                PlayerButtonAction::Block => {
+                    // TODO: block & use item
+                    battle_state.set(BattleState::PlayerAction).unwrap();
+                    player_battle_action.block = true;
+                }
+                _ => todo!("Unhandled player action button!!"), // TODO
             }
         }
     }
@@ -273,36 +278,7 @@ fn player_attack_setup(
     player_action: Res<PlayerBattleAction>,
 ) {
     if let Some(attack) = &player_action.attack {
-        // Get attack power.
-        let mut power = if let Some(global::PlayerAttackType::Limit) = attack.attack_type {
-            match attack.tier {
-                3 => 120. + 2.5 * player.stats.strength as f32,
-                2 => 80. + 2.0 * player.stats.strength as f32,
-                1 | _ => 40. + 1.5 * player.stats.strength as f32,
-            }
-        } else if let Some(global::PlayerAttackType::Magic) = attack.attack_type {
-            match attack.tier {
-                3 => 45. + 1.2 * player.stats.wisdom as f32,
-                2 => 15. + 1.0 * player.stats.wisdom as f32,
-                1 | _ => 5. + 0.8 * player.stats.wisdom as f32,
-            }
-        } else {
-            // Normal attack
-            1.5 * player.stats.strength as f32
-        };
-
-        // TODO: elemental modifier
-        // Apply elemental modifier.
-        // power = power * elemental_modifier(attack_element, enemy.enemy_stats.element);
-
-        // Get damage reduction.
-        let mut damage_reduction =
-            enemy.stats.defense as f32 + enemy.stats.defense as f32 / 300. * power as f32;
-        if let Some(global::PlayerAttackType::Magic) = attack.attack_type {
-            damage_reduction *= 0.2;
-        }
-
-        let damage = (power - damage_reduction).round() as i32;
+        let damage = calculate_player_attack_damage(&attack, &player, &enemy);
 
         enemy.stats.hp = std::cmp::min(
             std::cmp::max(0, enemy.stats.hp - damage),
@@ -329,8 +305,49 @@ fn player_attack_setup(
         let _ = announcement.texts.add(announcement_text);
     }
 
-    // TODO: handle block
+    if player_action.block {
+        let _ = announcement
+            .texts
+            .add(format!("You blocked their next attack."));
+    }
     // TODO: handle use item
+}
+
+fn calculate_player_attack_damage(
+    attack: &global::PlayerAttack,
+    player: &global::Player,
+    enemy: &global::Enemy,
+) -> i32 {
+    // Get attack power.
+    let mut power = if let Some(global::PlayerAttackType::Limit) = attack.attack_type {
+        match attack.tier {
+            3 => 120. + 2.5 * player.stats.strength as f32,
+            2 => 80. + 2.0 * player.stats.strength as f32,
+            1 | _ => 40. + 1.5 * player.stats.strength as f32,
+        }
+    } else if let Some(global::PlayerAttackType::Magic) = attack.attack_type {
+        match attack.tier {
+            3 => 45. + 1.2 * player.stats.wisdom as f32,
+            2 => 15. + 1.0 * player.stats.wisdom as f32,
+            1 | _ => 5. + 0.8 * player.stats.wisdom as f32,
+        }
+    } else {
+        // Normal attack
+        1.5 * player.stats.strength as f32
+    };
+
+    // TODO: elemental modifier
+    // Apply elemental modifier.
+    // power = power * elemental_modifier(attack_element, enemy.enemy_stats.element);
+
+    // Get damage reduction.
+    let mut damage_reduction =
+        enemy.stats.defense as f32 + enemy.stats.defense as f32 / 300. * power;
+    if let Some(global::PlayerAttackType::Magic) = attack.attack_type {
+        damage_reduction *= 0.2;
+    }
+
+    (power - damage_reduction).round() as i32
 }
 
 fn enemy_attack_setup(
@@ -341,16 +358,22 @@ fn enemy_attack_setup(
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
     enemy: Res<global::Enemy>,
+    player_action: Res<PlayerBattleAction>,
 ) {
-    // TODO: calculate damage
-    let damage = enemy.stats.strength;
+    // TODO: make sure enemy has enough mp
+    // TODO: deduct enemy mp
+    // TODO: pick random attack
+    let attack = &enemy.attacks[0];
+
+    let damage = calculate_enemy_attack_damage(&attack, &enemy, &player, player_action.block);
 
     let mut player = &mut player.stats;
-    player.hp -= damage;
+    player.hp = std::cmp::min(std::cmp::max(0, player.hp - damage), player.hp_max);
 
-    let _ = announcement
-        .texts
-        .add(format!("They did {} damage to you!", damage));
+    let _ = announcement.texts.add(format!(
+        "{} used {}, dealing {} damage to you!",
+        enemy.enemy_stats.name, attack.name, damage
+    ));
 
     // TODO: maybe put these into another system with Changed<> query filter...
     for mut health_text in set.p0().iter_mut() {
@@ -361,6 +384,37 @@ fn enemy_attack_setup(
     for mut health_bar in set.p1().iter_mut() {
         health_bar.size = Size::new(Val::Percent(player_hp_perc), Val::Percent(100.));
     }
+}
+
+fn calculate_enemy_attack_damage(
+    attack: &global::EnemyAttack,
+    enemy: &global::Enemy,
+    player: &global::Player,
+    player_block: bool,
+) -> i32 {
+    // Get attack power.
+    let power = attack.damage_modifier
+        * if let Some(global::EnemyAttackType::Magic) = attack.attack_type {
+            enemy.stats.wisdom as f32
+        } else if let Some(global::EnemyAttackType::Percentile) = attack.attack_type {
+            player.stats.hp_max as f32
+        } else {
+            // Physical attack.
+            enemy.stats.strength as f32
+        };
+
+    // Get damage reduction.
+    let mut damage_reduction =
+        player.stats.defense as f32 + player.stats.defense as f32 / 300. * power;
+    if let Some(global::EnemyAttackType::Magic) = attack.attack_type {
+        damage_reduction *= 0.2;
+    }
+    if player_block {
+        damage_reduction *= 2.;
+    }
+
+    // enemy damage cannot go below 0
+    std::cmp::max(0, (power - damage_reduction).round() as i32)
 }
 
 fn win_setup(
@@ -428,15 +482,14 @@ fn battle_update(
             commands.insert_resource(Timer::from_seconds(TEXT_DURATION, false));
         } else {
             match battle_state.as_ref().current() {
-                BattleState::PlayerAttack => {
+                BattleState::PlayerAction => {
                     if enemy.stats.hp <= 0 {
                         battle_state.set(BattleState::Win).unwrap();
                     } else {
-                        battle_state.set(BattleState::EnemyAttack).unwrap();
+                        battle_state.set(BattleState::EnemyAction).unwrap();
                     }
                 }
-                BattleState::EnemyAttack => {
-                    // TODO: lose state
+                BattleState::EnemyAction => {
                     if player.stats.hp <= 0 {
                         battle_state.set(BattleState::Lose).unwrap();
                     } else {

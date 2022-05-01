@@ -61,6 +61,32 @@ pub struct ImageAssets {
     player_battle: Handle<Image>,
     #[asset(path = "images/enemy1.png")]
     enemy1: Handle<Image>,
+    #[asset(path = "images/enemy2.png")]
+    enemy2: Handle<Image>,
+    #[asset(path = "images/enemy3.png")]
+    enemy3: Handle<Image>,
+    #[asset(path = "images/enemy4.png")]
+    enemy4: Handle<Image>,
+    #[asset(path = "images/enemy5.png")]
+    enemy5: Handle<Image>,
+    #[asset(path = "images/enemy6.png")]
+    enemy6: Handle<Image>,
+    #[asset(path = "images/enemy7.png")]
+    enemy7: Handle<Image>,
+    #[asset(path = "images/enemy8.png")]
+    enemy8: Handle<Image>,
+    #[asset(path = "images/enemy9.png")]
+    enemy9: Handle<Image>,
+    #[asset(path = "images/enemy10.png")]
+    enemy10: Handle<Image>,
+    #[asset(path = "images/enemy11.png")]
+    enemy11: Handle<Image>,
+    #[asset(path = "images/enemy12.png")]
+    enemy12: Handle<Image>,
+    #[asset(path = "images/enemy13.png")]
+    enemy13: Handle<Image>,
+    #[asset(path = "images/enemy14.png")]
+    enemy14: Handle<Image>,
 }
 
 #[derive(AssetCollection)]

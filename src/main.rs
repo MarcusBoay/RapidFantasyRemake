@@ -132,6 +132,18 @@ fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands
     }
 }
 
+fn despawn_children<T: Component>(
+    mut commands: Commands,
+    children_query: Query<&Children>,
+    to_despawn: Query<Entity, With<T>>,
+) {
+    if let Ok(children) = children_query.get(to_despawn.single()) {
+        for child in children.iter() {
+            commands.entity(*child).despawn_recursive();
+        }
+    }
+}
+
 // Recursively set the visibility of entities
 // https://github.com/bevyengine/bevy/issues/838#issuecomment-772082427
 fn set_visible_recursive(

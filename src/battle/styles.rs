@@ -183,7 +183,6 @@ pub fn styled_player_action_container() -> NodeBundle {
             flex_direction: FlexDirection::Row,
             ..default()
         },
-        visibility: Visibility { is_visible: false },
         ..default()
     }
 }
@@ -195,7 +194,6 @@ pub fn styled_player_action_button_container() -> NodeBundle {
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
-        visibility: Visibility { is_visible: false },
         ..default()
     }
 }
@@ -209,21 +207,7 @@ pub fn styled_player_action_button() -> ButtonBundle {
             align_items: AlignItems::Center,
             ..default()
         },
-        visibility: Visibility { is_visible: false },
         color: global::NORMAL_BUTTON.into(),
-        ..default()
-    }
-}
-
-pub fn styled_player_magic_menu_container() -> NodeBundle {
-    NodeBundle {
-        style: Style {
-            size: Size::new(Val::Percent(70.), Val::Percent(100.)),
-            flex_direction: FlexDirection::ColumnReverse,
-            ..default()
-        },
-        visibility: Visibility { is_visible: false },
-        color: Color::CRIMSON.into(),
         ..default()
     }
 }
@@ -242,7 +226,34 @@ pub fn styled_player_action_button_text(
             },
             Default::default(),
         ),
-        visibility: Visibility { is_visible: false },
+        ..default()
+    }
+}
+
+pub fn styled_player_magic_menu_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(70.), Val::Percent(100.)),
+            flex_direction: FlexDirection::ColumnReverse,
+            ..default()
+        },
+        color: Color::CRIMSON.into(),
+        ..default()
+    }
+}
+
+pub fn styled_player_magic_button_text(text: &str, font_assets: &Res<FontAssets>) -> TextBundle {
+    TextBundle {
+        text: Text::with_section(
+            text.to_string(),
+            TextStyle {
+                // TODO: refactor.. this is shared with styled_player_action_button_text()
+                font: font_assets.font.clone(),
+                font_size: 40.0,
+                color: global::TEXT_COLOR,
+            },
+            Default::default(),
+        ),
         ..default()
     }
 }

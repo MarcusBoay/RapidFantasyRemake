@@ -53,7 +53,7 @@ pub(crate) enum PlayerAttackType {
     Magic,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Component)]
 pub(crate) struct PlayerAttack {
     pub(crate) id: usize,
     pub(crate) name: String,
@@ -91,6 +91,21 @@ pub(crate) struct PlayerAttackTable {
 pub(crate) struct PlayerMagicEquipped {
     pub(crate) equipped: [Option<PlayerAttack>; 4],
 }
+
+// TODO: remove!!!
+// impl FromWorld for PlayerMagicEquipped {
+//     fn from_world(world: &mut World) -> Self {
+//         let attack_table = &world.get_resource_mut::<PlayerAttackTable>().unwrap().table;
+//         PlayerMagicEquipped {
+//             equipped: [
+//                 Some(attack_table.get(&4).unwrap().clone()),
+//                 None,
+//                 None,
+//                 None,
+//             ],
+//         }
+//     }
+// }
 
 pub(crate) struct PlayerLimitEquipped {
     pub(crate) equipped: PlayerAttack,

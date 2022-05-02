@@ -1,4 +1,4 @@
-use crate::{button_system, despawn_screen, global, set_visible_recursive, FontAssets};
+use crate::{button_system, despawn_children, despawn_screen, global, FontAssets};
 
 mod styles;
 use queues::*;
@@ -12,6 +12,8 @@ pub struct BattlePlugin;
 impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
         app.add_state(BattleState::Initialization)
+            .add_state(ActionMenuState::Inactive)
+            .add_state(MagicMenuState::Inactive)
             .init_resource::<Announcement>()
             .init_resource::<PlayerBattleAction>()
             .add_system_set(
@@ -23,12 +25,26 @@ impl Plugin for BattlePlugin {
             .add_system_set(SystemSet::on_enter(BattleState::Idle).with_system(idle_init))
             .add_system_set(
                 SystemSet::on_update(BattleState::Idle)
-                    .with_system(show_action_menu)
                     .with_system(button_system)
-                    .with_system(action_menu_button_action), // .with_system(magic_menu_button_action)
+                    .with_system(action_menu_button_action)
+                    .with_system(magic_menu_button_action),
             )
             .add_system_set(
-                SystemSet::on_exit(BattleState::Idle).with_system(hide_player_action_container),
+                SystemSet::on_exit(BattleState::Idle).with_system(deactivate_player_menus),
+            )
+            .add_system_set(
+                SystemSet::on_enter(ActionMenuState::Active).with_system(spawn_action_menu),
+            )
+            .add_system_set(
+                SystemSet::on_exit(ActionMenuState::Active)
+                    .with_system(despawn_children::<ActionMenu>),
+            )
+            .add_system_set(
+                SystemSet::on_enter(MagicMenuState::Active).with_system(spawn_magic_menu),
+            )
+            .add_system_set(
+                SystemSet::on_exit(MagicMenuState::Active)
+                    .with_system(despawn_children::<MagicMenu>),
             )
             .add_system_set(
                 SystemSet::on_enter(BattleState::PlayerAction).with_system(player_attack_setup),
@@ -69,14 +85,6 @@ enum BattleState {
     // maybe magic menu state?
 }
 
-#[derive(Component, Debug, Clone)]
-pub enum PlayerButtonAction {
-    Attack,
-    Magic,
-    Block,
-    Item,
-}
-
 #[derive(Default)]
 struct PlayerBattleAction {
     attack: Option<global::PlayerAttack>,
@@ -90,8 +98,28 @@ struct PlayerActionContainer;
 #[derive(Component)]
 struct ActionMenu;
 
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+enum ActionMenuState {
+    Active,
+    Inactive,
+}
+
+#[derive(Component, Debug, Clone)]
+pub enum PlayerButtonAction {
+    Attack,
+    Magic,
+    Block,
+    Item,
+}
+
 #[derive(Component)]
 struct MagicMenu;
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+enum MagicMenuState {
+    Active,
+    Inactive,
+}
 
 #[derive(Component)]
 struct HealthText;
@@ -192,26 +220,9 @@ fn battle_setup(
                         .insert(PlayerActionContainer)
                         .with_children(|p| {
                             p.spawn_bundle(styled_player_action_button_container())
-                                .insert(ActionMenu)
-                                .with_children(|p| {
-                                    for player_button_action in [
-                                        PlayerButtonAction::Attack,
-                                        PlayerButtonAction::Magic,
-                                        PlayerButtonAction::Block,
-                                        PlayerButtonAction::Item,
-                                    ] {
-                                        p.spawn_bundle(styled_player_action_button())
-                                            .insert(player_button_action.clone())
-                                            .with_children(|p| {
-                                                p.spawn_bundle(styled_player_action_button_text(
-                                                    &player_button_action,
-                                                    &font_assets,
-                                                ));
-                                            });
-                                    }
-                                });
-                            // p.spawn_bundle(styled_player_magic_menu_container())
-                            //     .insert(MagicMenu);
+                                .insert(ActionMenu);
+                            p.spawn_bundle(styled_player_magic_menu_container())
+                                .insert(MagicMenu);
                         });
                 });
 
@@ -229,6 +240,69 @@ fn battle_setup(
                     p.spawn_bundle(styled_battle_portrait(enemy_sprite));
                 });
         });
+}
+
+fn spawn_action_menu(
+    mut commands: Commands,
+    font_assets: Res<FontAssets>,
+    action_menu: Query<Entity, With<ActionMenu>>,
+) {
+    commands.entity(action_menu.single()).with_children(|p| {
+        for player_button_action in [
+            PlayerButtonAction::Attack,
+            PlayerButtonAction::Magic,
+            PlayerButtonAction::Block,
+            PlayerButtonAction::Item,
+        ] {
+            p.spawn_bundle(styled_player_action_button())
+                .insert(player_button_action.clone())
+                .with_children(|p| {
+                    p.spawn_bundle(styled_player_action_button_text(
+                        &player_button_action,
+                        &font_assets,
+                    ));
+                });
+        }
+    });
+}
+
+fn spawn_magic_menu(
+    mut commands: Commands,
+    font_assets: Res<FontAssets>,
+    magic_menu: Query<Entity, With<MagicMenu>>,
+    magic_equipped: Res<global::PlayerMagicEquipped>,
+) {
+    commands.entity(magic_menu.single()).with_children(|p| {
+        for magic in magic_equipped.equipped.iter() {
+            if let Some(magic) = &magic {
+                p.spawn_bundle(styled_player_action_button())
+                    .insert(magic.clone())
+                    .with_children(|p| {
+                        p.spawn_bundle(styled_player_magic_button_text(
+                            &magic.name[..],
+                            &font_assets,
+                        ));
+                    });
+            } else {
+                p.spawn_bundle(styled_player_action_button())
+                    .with_children(|p| {
+                        p.spawn_bundle(styled_player_magic_button_text("-", &font_assets));
+                    });
+            }
+        }
+    });
+}
+
+fn deactivate_player_menus(
+    mut action_menu_state: ResMut<State<ActionMenuState>>,
+    mut magic_menu_state: ResMut<State<MagicMenuState>>,
+) {
+    if *magic_menu_state.current() == MagicMenuState::Active {
+        magic_menu_state.set(MagicMenuState::Inactive).unwrap();
+    }
+    if *action_menu_state.current() == ActionMenuState::Active {
+        action_menu_state.set(ActionMenuState::Inactive).unwrap();
+    }
 }
 
 fn battle_init(
@@ -249,10 +323,14 @@ fn idle_init(
     announcement: Res<Announcement>,
     mut announcement_text: Query<&mut Text>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
+    mut action_menu_state: ResMut<State<ActionMenuState>>,
 ) {
     *announcement_text
         .get_mut(announcement.entity.unwrap())
         .unwrap() = Text::with_section("", common_text_style(&font_assets), Default::default());
+
+    // Show action menu.
+    action_menu_state.set(ActionMenuState::Active).unwrap();
 
     // Reset player battle actions.
     player_battle_action.attack = None;
@@ -267,7 +345,11 @@ fn action_menu_button_action(
         (&Interaction, &PlayerButtonAction),
         (Changed<Interaction>, With<Button>),
     >,
+    // mut visible_query: Query<&mut Visibility>,
+    // children_query: Query<&Children>,
+    // mut magic_menu: Query<Entity, With<MagicMenu>>,
     mut battle_state: ResMut<State<BattleState>>,
+    mut magic_menu_state: ResMut<State<MagicMenuState>>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
     player: Res<global::Player>,
     player_limit: Res<global::PlayerLimitEquipped>,
@@ -278,8 +360,6 @@ fn action_menu_button_action(
             match menu_button_action {
                 PlayerButtonAction::Attack => {
                     battle_state.set(BattleState::PlayerAction).unwrap();
-
-                    // TODO: change text to 'Limit!'
 
                     player_battle_action.attack = if player.limit == 100 {
                         Some(player_limit.equipped.clone())
@@ -292,52 +372,38 @@ fn action_menu_button_action(
                     battle_state.set(BattleState::PlayerAction).unwrap();
                     player_battle_action.block = true;
                 }
-                // PlayerButtonAction::Magic => {
-                // set_visible_recursive(is_visible, entity, visible_query, children_query)
-                // }
-                _ => todo!("Unhandled player action button!!"), // TODO
+                PlayerButtonAction::Magic => {
+                    // Switch magic menu state.
+                    match magic_menu_state.current() {
+                        MagicMenuState::Active => {
+                            magic_menu_state.set(MagicMenuState::Inactive).unwrap()
+                        }
+                        MagicMenuState::Inactive => {
+                            magic_menu_state.set(MagicMenuState::Active).unwrap()
+                        }
+                    }
+                }
+                _ => todo!("Unhandled player action button!!"),
             }
         }
     }
 }
 
-// fn magic_menu_button_action(
-//     interaction_query: Query<
-//         (&Interaction, &Magic),
-//         (Changed<Interaction>, With<Button>),
-//     >,
-//     mut battle_state: ResMut<State<BattleState>>,
-//     mut player_battle_action: ResMut<PlayerBattleAction>,
-// ) {
-//     for (interaction, menu_button_action) in interaction_query.iter() {
-//         if *interaction == Interaction::Clicked {
-//             match menu_button_action {
-//                 PlayerButtonAction::Attack => {
-//                     battle_state.set(BattleState::PlayerAction).unwrap();
-
-//                     // TODO: switch between attack and limit break
-//                     // TODO: get attack from player attack inventory...
-//                     player_battle_action.attack = Some(global::PlayerAttack {
-//                         name: "Tackle".to_string(),
-//                         attack_type: None,
-//                         element: None,
-//                         mp_use: 0,
-//                         tier: 1,
-//                     });
-//                 }
-//                 PlayerButtonAction::Block => {
-//                     // TODO: block & use item
-//                     battle_state.set(BattleState::PlayerAction).unwrap();
-//                     player_battle_action.block = true;
-//                 }
-//                 PlayerButtonAction::Magic => {
-//                     // set_visible_recursive(is_visible, entity, visible_query, children_query)
-//                 }
-//                 _ => todo!("Unhandled player action button!!"), // TODO
-//             }
-//         }
-//     }
-// }
+fn magic_menu_button_action(
+    interaction_query: Query<
+        (&Interaction, &global::PlayerAttack),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut battle_state: ResMut<State<BattleState>>,
+    mut player_battle_action: ResMut<PlayerBattleAction>,
+) {
+    for (interaction, menu_button_action) in interaction_query.iter() {
+        if *interaction == Interaction::Clicked {
+            battle_state.set(BattleState::PlayerAction).unwrap();
+            player_battle_action.attack = Some(menu_button_action.clone());
+        }
+    }
+}
 
 fn player_attack_setup(
     mut set: ParamSet<(
@@ -643,43 +709,4 @@ fn battle_update(
             }
         }
     }
-}
-
-fn hide_player_action_container(
-    children_query: Query<&Children>,
-    mut visible_query: Query<&mut Visibility>,
-    entity_vis: Query<Entity, With<PlayerActionContainer>>,
-) {
-    set_visible_recursive(
-        false,
-        entity_vis.single(),
-        &mut visible_query,
-        &children_query,
-    );
-}
-
-// fn show_player_action_container(
-//     children_query: Query<&Children>,
-//     mut visible_query: Query<&mut Visibility>,
-//     entity_vis: Query<Entity, With<PlayerActionContainer>>,
-// ) {
-//     set_visible_recursive(
-//         true,
-//         entity_vis.single(),
-//         &mut visible_query,
-//         &children_query,
-//     );
-// }
-
-fn show_action_menu(
-    children_query: Query<&Children>,
-    mut visible_query: Query<&mut Visibility>,
-    entity_vis: Query<Entity, With<ActionMenu>>,
-) {
-    set_visible_recursive(
-        true,
-        entity_vis.single(),
-        &mut visible_query,
-        &children_query,
-    );
 }

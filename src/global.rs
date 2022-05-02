@@ -30,6 +30,7 @@ pub(crate) struct Player {
     pub(crate) y: f32,
     pub(crate) stats: Stats,
     pub(crate) limit: u8,
+    pub(crate) area: u32,
 }
 
 #[derive(Component, Clone, Default)]

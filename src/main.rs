@@ -44,8 +44,18 @@ struct SelectedOption;
 pub struct ImageAssets {
     #[asset(path = "images/main_menu.png")]
     main_menu: Handle<Image>,
-    #[asset(path = "images/overworld1.png")]
-    overworld1: Handle<Image>,
+    #[asset(path = "images/area0.png")]
+    area0: Handle<Image>,
+    #[asset(path = "images/area1.png")]
+    area1: Handle<Image>,
+    #[asset(path = "images/area2.png")]
+    area2: Handle<Image>,
+    #[asset(path = "images/area3.png")]
+    area3: Handle<Image>,
+    #[asset(path = "images/area4.png")]
+    area4: Handle<Image>,
+    #[asset(path = "images/area5.png")]
+    area5: Handle<Image>,
 
     #[asset(path = "images/game_over.png")]
     game_over: Handle<Image>,

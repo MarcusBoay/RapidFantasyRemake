@@ -5,7 +5,7 @@ mod lose;
 mod mainmenu; // why does this work?????
 mod overworld;
 mod player_attack_table;
-use bevy::{prelude::*, window::PresentMode};
+use bevy::prelude::*;
 use bevy_asset_loader::{AssetCollection, AssetLoader};
 
 fn main() {
@@ -17,9 +17,7 @@ fn main() {
         .build(&mut app);
     app.insert_resource(WindowDescriptor {
         title: "Rapid Fantasy - Remake".to_string(),
-        width: 1280.0, // FIXME: this is causing the window to be fullscreen...
-        height: 720.0,
-        present_mode: PresentMode::Fifo,
+        resizable: false,
         ..default()
     })
     .insert_resource(ClearColor(global::BACKGROUND_COLOR))

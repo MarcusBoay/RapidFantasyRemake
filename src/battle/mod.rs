@@ -107,6 +107,7 @@ enum ActionMenuState {
 #[derive(Component, Debug, Clone)]
 pub enum PlayerButtonAction {
     Attack,
+    LimitBreak,
     Magic,
     Block,
     Item,
@@ -120,6 +121,9 @@ enum MagicMenuState {
     Active,
     Inactive,
 }
+
+#[derive(Component)]
+struct EnemyHPBar;
 
 #[derive(Component)]
 struct HealthText;
@@ -237,7 +241,11 @@ fn battle_setup(
             p.spawn_bundle(styled_battle_images_container())
                 .with_children(|p| {
                     p.spawn_bundle(styled_battle_portrait(player.stats.battle_sprite.clone()));
-                    p.spawn_bundle(styled_battle_portrait(enemy_sprite));
+                    p.spawn_bundle(styled_enemy_portrait_container())
+                        .with_children(|p| {
+                            p.spawn_bundle(styled_battle_portrait(enemy_sprite));
+                            p.spawn_bundle(styled_enemy_hp_bar()).insert(EnemyHPBar);
+                        });
                 });
         });
 }
@@ -245,11 +253,16 @@ fn battle_setup(
 fn spawn_action_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
+    player: Res<global::Player>,
     action_menu: Query<Entity, With<ActionMenu>>,
 ) {
     commands.entity(action_menu.single()).with_children(|p| {
         for player_button_action in [
-            PlayerButtonAction::Attack,
+            if (player.limit < 100) {
+                PlayerButtonAction::Attack
+            } else {
+                PlayerButtonAction::LimitBreak
+            },
             PlayerButtonAction::Magic,
             PlayerButtonAction::Block,
             PlayerButtonAction::Item,
@@ -336,8 +349,6 @@ fn idle_init(
     player_battle_action.attack = None;
     player_battle_action.block = false;
     // player_battle_action.item = None;
-
-    // TODO: change text 'Attack' to 'Limit Break'
 }
 
 fn action_menu_button_action(
@@ -345,13 +356,9 @@ fn action_menu_button_action(
         (&Interaction, &PlayerButtonAction),
         (Changed<Interaction>, With<Button>),
     >,
-    // mut visible_query: Query<&mut Visibility>,
-    // children_query: Query<&Children>,
-    // mut magic_menu: Query<Entity, With<MagicMenu>>,
     mut battle_state: ResMut<State<BattleState>>,
     mut magic_menu_state: ResMut<State<MagicMenuState>>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
-    player: Res<global::Player>,
     player_limit: Res<global::PlayerLimitEquipped>,
     player_attack_table: Res<global::PlayerAttackTable>,
 ) {
@@ -360,12 +367,12 @@ fn action_menu_button_action(
             match menu_button_action {
                 PlayerButtonAction::Attack => {
                     battle_state.set(BattleState::PlayerAction).unwrap();
-
-                    player_battle_action.attack = if player.limit == 100 {
-                        Some(player_limit.equipped.clone())
-                    } else {
+                    player_battle_action.attack =
                         Some(player_attack_table.table.get(&0).unwrap().clone())
-                    };
+                }
+                PlayerButtonAction::LimitBreak => {
+                    battle_state.set(BattleState::PlayerAction).unwrap();
+                    player_battle_action.attack = Some(player_limit.equipped.clone());
                 }
                 PlayerButtonAction::Block => {
                     // TODO: block & use item
@@ -409,7 +416,8 @@ fn player_attack_setup(
     mut set: ParamSet<(
         Query<&mut Text, With<ManaText>>,
         Query<&mut Style, With<ManaBar>>,
-        Query<&mut Style, With<LimitBar>>,
+        Query<(&mut Style, &mut UiColor), With<LimitBar>>,
+        Query<&mut Style, With<EnemyHPBar>>,
     )>,
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
@@ -427,15 +435,13 @@ fn player_attack_setup(
 
         if let Some(global::PlayerAttackType::Limit) = &attack.attack_type {
             player.limit = 0;
-            for mut limit_bar in set.p2().iter_mut() {
-                limit_bar.size = Size::new(Val::Percent(0.), Val::Percent(100.));
-                // TODO: color change
+            for (mut limit_bar, mut color) in set.p2().iter_mut() {
+                limit_bar.size.width = Val::Percent(0.);
+                *color = Color::ORANGE.into();
             }
         }
 
         player.stats.mp -= attack.mp_use;
-
-        println!("enemy hp: {}", enemy.stats.hp); // TODO: make enemy hp bar
 
         let announcement_text = if damage >= 0 {
             format!("You used {}, dealing {} damage!", attack.name, damage)
@@ -456,7 +462,12 @@ fn player_attack_setup(
 
         let player_mp_perc = player.mp as f32 / player.mp_max as f32 * 100.;
         for mut mp_bar in set.p1().iter_mut() {
-            mp_bar.size = Size::new(Val::Percent(player_mp_perc), Val::Percent(100.));
+            mp_bar.size.width = Val::Percent(player_mp_perc);
+        }
+
+        let enemy_hp_perc = enemy.stats.hp as f32 / enemy.stats.hp_max as f32 * 256.;
+        for mut enemy_hp_bar in set.p3().iter_mut() {
+            enemy_hp_bar.size.width = Val::Px(enemy_hp_perc);
         }
     }
 
@@ -528,7 +539,7 @@ fn enemy_attack_setup(
     mut set: ParamSet<(
         Query<&mut Text, With<HealthText>>,
         Query<&mut Style, With<HealthBar>>,
-        Query<&mut Style, With<LimitBar>>,
+        Query<(&mut Style, &mut UiColor), With<LimitBar>>,
     )>,
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
@@ -572,12 +583,14 @@ fn enemy_attack_setup(
 
     let player_hp_perc = player.stats.hp as f32 / player.stats.hp_max as f32 * 100.;
     for mut health_bar in set.p1().iter_mut() {
-        health_bar.size = Size::new(Val::Percent(player_hp_perc), Val::Percent(100.));
+        health_bar.size.width = Val::Percent(player_hp_perc);
     }
 
-    for mut limit in set.p2().iter_mut() {
-        limit.size = Size::new(Val::Percent(player.limit as f32), Val::Percent(100.));
-        // TODO: color change
+    for (mut limit, mut color) in set.p2().iter_mut() {
+        limit.size.width = Val::Percent(player.limit as f32);
+        if player.limit == 100 {
+            *color = Color::RED.into();
+        }
     }
 }
 

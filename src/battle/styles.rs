@@ -145,7 +145,7 @@ pub fn styled_player_mp_bar(mp_perc: f32) -> NodeBundle {
 pub fn styled_player_limit_break_text(font_assets: &Res<FontAssets>) -> TextBundle {
     TextBundle {
         text: Text::with_section(
-            "Limit Break".to_string(),
+            "Limit".to_string(),
             common_text_style(font_assets),
             Default::default(),
         ),
@@ -167,10 +167,14 @@ pub fn styled_player_limit_break_bar_container() -> NodeBundle {
 pub fn styled_player_limit_break_bar(limit: u8) -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(limit as f32), Val::Percent(100.)), // TODO: update width based on limit break value
+            size: Size::new(Val::Percent(limit as f32), Val::Percent(100.)),
             ..default()
         },
-        color: Color::ORANGE.into(), // TODO: update color based on limit break value
+        color: if limit < 100 {
+            Color::ORANGE.into()
+        } else {
+            Color::RED.into()
+        },
         ..default()
     }
 }
@@ -304,6 +308,31 @@ pub fn styled_battle_portrait(image: Handle<Image>) -> ImageBundle {
             ..default()
         },
         image: UiImage(image),
+        ..default()
+    }
+}
+
+pub fn styled_enemy_portrait_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(50.), Val::Percent(100.)),
+            align_content: AlignContent::Center,
+            align_items: AlignItems::Center,
+            flex_direction: FlexDirection::ColumnReverse,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        ..default()
+    }
+}
+
+pub fn styled_enemy_hp_bar() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Px(256.), Val::Px(12.)),
+            ..default()
+        },
+        color: Color::RED.into(),
         ..default()
     }
 }

@@ -58,6 +58,7 @@ fn main_menu_setup(
 ) {
     // HACK: This is here because we need ImageAssets to be initialized...
     commands.init_resource::<global::EnemyTable>();
+    commands.init_resource::<global::Areas>();
 
     // Reset state for recurring visit to this page.
     if *menu_state.current() == MenuState::Disabled {

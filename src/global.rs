@@ -1,5 +1,7 @@
 use bevy::{math::const_vec2, prelude::*, utils::HashMap};
 
+use crate::ImageAssets;
+
 pub(crate) const TEXT_COLOR: Color = Color::BLACK;
 pub(crate) const BACKGROUND_SIZE: Vec2 = const_vec2!([1280., 720.]);
 pub(crate) const BACKGROUND_COLOR: Color = Color::BLACK;
@@ -24,13 +26,48 @@ pub(crate) enum GameState {
 }
 
 #[derive(Default)]
+pub(crate) struct Area {
+    pub(crate) id: usize,
+    pub(crate) enemies: Vec<usize>, // enemy ids
+    pub(crate) background: Handle<Image>,
+}
+
+impl Area {
+    fn new(id: usize, enemies: Vec<usize>, background: Handle<Image>) -> Area {
+        Area {
+            id,
+            enemies,
+            background,
+        }
+    }
+}
+
+#[derive(Deref)]
+pub(crate) struct Areas(HashMap<usize, Area>);
+
+impl FromWorld for Areas {
+    fn from_world(world: &mut World) -> Self {
+        let image_assets = world.get_resource_mut::<ImageAssets>().unwrap();
+        let mut areas = HashMap::new();
+        areas.insert(0, Area::new(0, vec![], image_assets.area0.clone()));
+        areas.insert(1, Area::new(1, vec![0, 1, 2], image_assets.area1.clone()));
+        areas.insert(2, Area::new(2, vec![3, 4], image_assets.area2.clone()));
+        areas.insert(3, Area::new(3, vec![5, 6], image_assets.area3.clone()));
+        areas.insert(4, Area::new(4, vec![7, 8], image_assets.area4.clone()));
+        areas.insert(5, Area::new(5, vec![9, 10], image_assets.area5.clone()));
+
+        Areas(areas)
+    }
+}
+
+#[derive(Default)]
 pub(crate) struct Player {
     pub(crate) entity: Option<Entity>,
     pub(crate) x: f32,
     pub(crate) y: f32,
     pub(crate) stats: Stats,
     pub(crate) limit: u8,
-    pub(crate) area: u32,
+    pub(crate) area: usize,
 }
 
 #[derive(Component, Clone, Default)]
@@ -200,5 +237,5 @@ impl EnemyAttack {
 }
 
 pub(crate) struct EnemyTable {
-    pub(crate) table: HashMap<u32, (EnemyStats, Stats, Vec<EnemyAttack>)>,
+    pub(crate) table: HashMap<usize, (EnemyStats, Stats, Vec<EnemyAttack>)>,
 }

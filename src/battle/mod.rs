@@ -258,7 +258,7 @@ fn spawn_action_menu(
 ) {
     commands.entity(action_menu.single()).with_children(|p| {
         for player_button_action in [
-            if (player.limit < 100) {
+            if player.limit < 100 {
                 PlayerButtonAction::Attack
             } else {
                 PlayerButtonAction::LimitBreak

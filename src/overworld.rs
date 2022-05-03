@@ -1,6 +1,7 @@
 use crate::{despawn_screen, global, ImageAssets};
 
 use bevy::{math::const_vec2, prelude::*};
+use rand::{prelude::SliceRandom, thread_rng, Rng};
 
 const TIME_STEP: f32 = 1.0 / 60.0;
 
@@ -8,34 +9,43 @@ const PLAYER_SPEED: f32 = 640.0;
 const PLAYER_SPRINT: f32 = 1.5;
 const PLAYER_SIZE: Vec2 = const_vec2!([64.0, 64.0]);
 
+const MIN_ENEMY_SPAWN_STEPS: f32 = 64.;
+const ENEMY_TRY_SPAWN_STEPS: f32 = 64.;
+const ENEMY_SPAWN_CHANCE: usize = 10; // higher is lesser chance
+
 pub struct OverworldPlugin;
 
 impl Plugin for OverworldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::on_enter(global::GameState::Overworld).with_system(overworld_setup),
-        )
-        .add_system_set(
-            SystemSet::on_update(global::GameState::Overworld)
-                .with_system(move_player)
-                .with_system(change_player_image)
-                .with_system(spawn_monster)
-                .with_system(go_to_area),
-        )
-        // When exiting the state, despawn everything that was spawned for this screen
-        .add_system_set(
-            SystemSet::on_exit(global::GameState::Overworld)
-                .with_system(despawn_screen::<OverworldScreen>),
-        );
+        app.init_resource::<PlayerSteps>()
+            .add_system_set(
+                SystemSet::on_enter(global::GameState::Overworld).with_system(overworld_setup),
+            )
+            .add_system_set(
+                SystemSet::on_update(global::GameState::Overworld)
+                    .with_system(move_player)
+                    .with_system(change_player_image)
+                    .with_system(spawn_monster)
+                    .with_system(go_to_area),
+            )
+            // When exiting the state, despawn everything that was spawned for this screen
+            .add_system_set(
+                SystemSet::on_exit(global::GameState::Overworld)
+                    .with_system(despawn_screen::<OverworldScreen>),
+            );
     }
 }
 
 #[derive(Component)]
 struct OverworldScreen;
 
+#[derive(Default, Deref)]
+struct PlayerSteps(f32);
+
 fn overworld_setup(
     mut commands: Commands,
     image_assets: Res<ImageAssets>,
+    areas: Res<global::Areas>,
     mut player: ResMut<global::Player>,
 ) {
     // Overworld
@@ -45,7 +55,7 @@ fn overworld_setup(
                 translation: Vec3::new(0., 0., 0.),
                 ..default()
             },
-            texture: get_overworld_background(&player, &image_assets),
+            texture: areas.get(&player.area).unwrap().background.clone(),
             sprite: Sprite {
                 custom_size: Some(global::BACKGROUND_SIZE),
                 ..default()
@@ -72,26 +82,12 @@ fn overworld_setup(
         });
 }
 
-fn get_overworld_background(
-    player: &global::Player,
-    image_assets: &Res<ImageAssets>,
-) -> Handle<Image> {
-    match player.area {
-        0 => image_assets.area0.clone(),
-        1 => image_assets.area1.clone(),
-        2 => image_assets.area2.clone(),
-        3 => image_assets.area3.clone(),
-        4 => image_assets.area4.clone(),
-        5 => image_assets.area5.clone(),
-        _ => unreachable!(),
-    }
-}
-
 fn go_to_area(
     mut background: Query<&mut Handle<Image>, With<OverworldScreen>>,
     mut transforms: Query<&mut Transform, Changed<Transform>>,
     mut player: ResMut<global::Player>,
-    image_assets: Res<ImageAssets>,
+    mut player_steps: ResMut<PlayerSteps>,
+    areas: Res<global::Areas>,
 ) {
     // TODO: rename these. these are horribly named...
     fn is_below(player: &global::Player) -> bool {
@@ -165,10 +161,12 @@ fn go_to_area(
     }
 
     if changed_area {
-        *background.single_mut() = get_overworld_background(&player, &image_assets);
+        *background.single_mut() = areas.get(&player.area).unwrap().background.clone();
         let player_transform = &mut transforms.get_mut(player.entity.unwrap()).unwrap();
         player_transform.translation.x = player.x;
         player_transform.translation.y = player.y;
+
+        player_steps.0 = 0.;
     }
 }
 
@@ -176,6 +174,7 @@ fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
     mut player: ResMut<global::Player>,
     mut transforms: Query<&mut Transform>,
+    mut player_steps: ResMut<PlayerSteps>,
 ) {
     let player_transform = &mut transforms.get_mut(player.entity.unwrap()).unwrap();
     let mut direction_horizontal = 0.0;
@@ -198,10 +197,11 @@ fn move_player(
         direction_vertical *= PLAYER_SPRINT;
     }
 
-    let new_player_position_x =
-        player_transform.translation.x + direction_horizontal * PLAYER_SPEED * TIME_STEP;
-    let new_player_position_y =
-        player_transform.translation.y + direction_vertical * PLAYER_SPEED * TIME_STEP;
+    let steps_horizontal = direction_horizontal * PLAYER_SPEED * TIME_STEP;
+    let steps_vertical = direction_vertical * PLAYER_SPEED * TIME_STEP;
+
+    let new_player_position_x = player_transform.translation.x + steps_horizontal;
+    let new_player_position_y = player_transform.translation.y + steps_vertical;
 
     player.x = new_player_position_x;
     player.y = new_player_position_y;
@@ -209,6 +209,8 @@ fn move_player(
     // TODO: clamp within map area
     player_transform.translation.x = new_player_position_x;
     player_transform.translation.y = new_player_position_y;
+
+    player_steps.0 += steps_horizontal.abs() + steps_vertical.abs();
 }
 
 fn change_player_image(
@@ -235,28 +237,44 @@ fn change_player_image(
     }
 }
 
-// TODO: change to random chance to spawn
 // TODO: spawn final boss monster during interaction
 fn spawn_monster(
-    keyboard_input: Res<Input<KeyCode>>,
+    // keyboard_input: Res<Input<KeyCode>>,
+    mut player_steps: ResMut<PlayerSteps>,
     mut game_state: ResMut<State<global::GameState>>,
     mut commands: Commands,
     enemy_table: Res<global::EnemyTable>,
     mut enemy: ResMut<global::Enemy>,
+    areas: Res<global::Areas>,
+    player: Res<global::Player>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::P) {
-        // TODO: random chance, area enemies
-        let spawned_enemy = enemy_table.table.get(&0).unwrap();
-        let (enemy_stats, stats, attacks) = (
-            spawned_enemy.0.clone(),
-            spawned_enemy.1.clone(),
-            spawned_enemy.2.clone(),
-        );
+    let area_enemies = &areas.get(&player.area).unwrap().enemies;
+    if area_enemies.len() == 0 {
+        // Length 0 means the area is a safe area.
+        player_steps.0 = 0.;
+        return;
+    }
 
-        enemy.entity = Some(commands.spawn().id());
-        enemy.stats = stats;
-        enemy.enemy_stats = enemy_stats;
-        enemy.attacks = attacks;
-        game_state.set(global::GameState::Battle).unwrap();
+    if player_steps.0 > MIN_ENEMY_SPAWN_STEPS + ENEMY_TRY_SPAWN_STEPS {
+        let should_spawn_enemy_roll = thread_rng().gen_range(0..ENEMY_SPAWN_CHANCE) == 0;
+        if should_spawn_enemy_roll {
+            let enemy_id_roll = area_enemies.choose(&mut rand::thread_rng()).unwrap();
+            let spawned_enemy = enemy_table.table.get(enemy_id_roll).unwrap();
+            let (enemy_stats, stats, attacks) = (
+                spawned_enemy.0.clone(),
+                spawned_enemy.1.clone(),
+                spawned_enemy.2.clone(),
+            );
+
+            enemy.entity = Some(commands.spawn().id());
+            enemy.stats = stats;
+            enemy.enemy_stats = enemy_stats;
+            enemy.attacks = attacks;
+            game_state.set(global::GameState::Battle).unwrap();
+
+            player_steps.0 = 0.;
+        } else {
+            player_steps.0 = MIN_ENEMY_SPAWN_STEPS;
+        }
     }
 }

@@ -286,7 +286,7 @@ fn spawn_magic_menu(
     magic_equipped: Res<global::PlayerMagicEquipped>,
 ) {
     commands.entity(magic_menu.single()).with_children(|p| {
-        for magic in magic_equipped.equipped.iter() {
+        for magic in magic_equipped.iter() {
             if let Some(magic) = &magic {
                 p.spawn_bundle(styled_player_action_button())
                     .insert(magic.clone())
@@ -372,7 +372,7 @@ fn action_menu_button_action(
                 }
                 PlayerButtonAction::LimitBreak => {
                     battle_state.set(BattleState::PlayerAction).unwrap();
-                    player_battle_action.attack = Some(player_limit.equipped.clone());
+                    player_battle_action.attack = Some(player_limit.clone());
                 }
                 PlayerButtonAction::Block => {
                     // TODO: block & use item

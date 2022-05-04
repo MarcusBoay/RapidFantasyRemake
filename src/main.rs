@@ -1,6 +1,7 @@
 mod battle;
 mod enemy_table;
 mod global;
+mod item_table;
 mod lose;
 mod mainmenu; // why does this work?????
 mod overworld;
@@ -22,9 +23,11 @@ fn main() {
     })
     .insert_resource(ClearColor(global::BACKGROUND_COLOR))
     .init_resource::<global::PlayerAttackTable>()
+    .init_resource::<global::ItemTable>()
     .init_resource::<global::Player>()
     .init_resource::<global::PlayerMagicEquipped>()
     .init_resource::<global::PlayerLimitEquipped>()
+    .init_resource::<global::PlayerItemInventory>()
     .init_resource::<global::Enemy>()
     .add_state(global::GameState::Initialization)
     .add_startup_system(setup_main)

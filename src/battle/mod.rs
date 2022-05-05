@@ -588,24 +588,23 @@ fn player_attack_setup(
     }
 
     if let Some(item) = player_action.item.clone() {
+        let mut item_announce_text = format!("You used {}, healing", item.name);
         if item.stats.hp > 0 {
             player.stats.hp = std::cmp::min(player.stats.hp + item.stats.hp, player.stats.hp_max);
-            let _ = announcement.texts.add(format!(
-                "You used {}, healing {} hp.",
-                item.name, item.stats.hp
-            ));
-        } else if item.stats.mp > 0 {
+            item_announce_text.push_str(&format!(" {} hp", item.stats.hp)[..]);
+        }
+        if item.stats.mp > 0 {
             player.stats.mp = std::cmp::min(player.stats.mp + item.stats.mp, player.stats.mp_max);
-            let _ = announcement.texts.add(format!(
-                "You used {}, healing {} mp.",
-                item.name, item.stats.mp
-            ));
+            item_announce_text.push_str(&format!(" {} mp", item.stats.mp)[..]);
         }
 
+        // Decrement item and remove if reach 0.
         *item_inventory.get_mut(&item.id).unwrap() -= 1;
         if *item_inventory.get_mut(&item.id).unwrap() == 0 {
             item_inventory.remove(&item.id);
         }
+
+        let _ = announcement.texts.add(item_announce_text);
     }
 
     for mut health_text in set.p4().iter_mut() {

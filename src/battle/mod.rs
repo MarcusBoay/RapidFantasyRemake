@@ -4,7 +4,10 @@ mod styles;
 use queues::*;
 pub use styles::*;
 
-use bevy::prelude::*;
+use bevy::{
+    input::mouse::{MouseScrollUnit, MouseWheel},
+    prelude::*,
+};
 use rand::prelude::*;
 
 pub struct BattlePlugin;
@@ -14,8 +17,10 @@ impl Plugin for BattlePlugin {
         app.add_state(BattleState::Initialization)
             .add_state(ActionMenuState::Inactive)
             .add_state(MagicMenuState::Inactive)
+            .add_state(ItemMenuState::Inactive)
             .init_resource::<Announcement>()
             .init_resource::<PlayerBattleAction>()
+            .init_resource::<SelectedItem>()
             .add_system_set(
                 SystemSet::on_enter(global::GameState::Battle).with_system(battle_setup),
             )
@@ -27,7 +32,10 @@ impl Plugin for BattlePlugin {
                 SystemSet::on_update(BattleState::Idle)
                     .with_system(button_system)
                     .with_system(action_menu_button_action)
-                    .with_system(magic_menu_button_action),
+                    .with_system(magic_menu_button_action)
+                    .with_system(item_button_action)
+                    .with_system(item_use_button_action)
+                    .with_system(item_list_scroll),
             )
             .add_system_set(
                 SystemSet::on_exit(BattleState::Idle).with_system(deactivate_player_menus),
@@ -44,7 +52,12 @@ impl Plugin for BattlePlugin {
             )
             .add_system_set(
                 SystemSet::on_exit(MagicMenuState::Active)
-                    .with_system(despawn_children::<MagicMenu>),
+                    .with_system(despawn_children::<SubActionMenu>),
+            )
+            .add_system_set(SystemSet::on_enter(ItemMenuState::Active).with_system(spawn_item_menu))
+            .add_system_set(
+                SystemSet::on_exit(ItemMenuState::Active)
+                    .with_system(despawn_children::<SubActionMenu>),
             )
             .add_system_set(
                 SystemSet::on_enter(BattleState::PlayerAction).with_system(player_attack_setup),
@@ -82,14 +95,13 @@ enum BattleState {
     Win,
     Lose,
     Deinitialize,
-    // maybe magic menu state?
 }
 
 #[derive(Default)]
 struct PlayerBattleAction {
     attack: Option<global::PlayerAttack>,
     block: bool,
-    // item: Option<Item>
+    item: Option<global::Item>,
 }
 
 #[derive(Component)]
@@ -114,12 +126,32 @@ pub enum PlayerButtonAction {
 }
 
 #[derive(Component)]
-struct MagicMenu;
+struct SubActionMenu;
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum MagicMenuState {
     Active,
     Inactive,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+enum ItemMenuState {
+    Active,
+    Inactive,
+}
+
+#[derive(Component, Deref)]
+struct ItemButton(usize); // holds item id
+
+#[derive(Deref, Default)]
+struct SelectedItem(Option<global::Item>);
+
+#[derive(Component)]
+struct UseItemButton;
+
+#[derive(Component, Default)]
+struct ItemList {
+    position: f32,
 }
 
 #[derive(Component)]
@@ -225,8 +257,8 @@ fn battle_setup(
                         .with_children(|p| {
                             p.spawn_bundle(styled_player_action_button_container())
                                 .insert(ActionMenu);
-                            p.spawn_bundle(styled_player_magic_menu_container())
-                                .insert(MagicMenu);
+                            p.spawn_bundle(styled_player_sub_action_menu_container())
+                                .insert(SubActionMenu);
                         });
                 });
 
@@ -282,7 +314,7 @@ fn spawn_action_menu(
 fn spawn_magic_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
-    magic_menu: Query<Entity, With<MagicMenu>>,
+    magic_menu: Query<Entity, With<SubActionMenu>>,
     magic_equipped: Res<global::PlayerMagicEquipped>,
 ) {
     commands.entity(magic_menu.single()).with_children(|p| {
@@ -306,15 +338,56 @@ fn spawn_magic_menu(
     });
 }
 
+fn spawn_item_menu(
+    mut commands: Commands,
+    font_assets: Res<FontAssets>,
+    item_menu: Query<Entity, With<SubActionMenu>>,
+    items: Res<global::PlayerItemInventory>,
+    item_table: Res<global::ItemTable>,
+) {
+    commands.entity(item_menu.single()).with_children(|p| {
+        p.spawn_bundle(styled_item_list_container())
+            .with_children(|p| {
+                p.spawn_bundle(styled_item_list())
+                    .insert(ItemList::default())
+                    .with_children(|p| {
+                        for (item_id, quantity) in items.iter() {
+                            p.spawn_bundle(styled_player_action_button())
+                                .insert(ItemButton(*item_id))
+                                .with_children(|p| {
+                                    p.spawn_bundle(styled_player_item_button_text(
+                                        format!(
+                                            "{} ({})",
+                                            item_table.get(&item_id).unwrap().name,
+                                            quantity
+                                        ),
+                                        &font_assets,
+                                    ));
+                                });
+                        }
+                    });
+                p.spawn_bundle(styled_player_item_use_button())
+                    .insert(UseItemButton)
+                    .with_children(|p| {
+                        p.spawn_bundle(styled_player_magic_button_text("Use Item", &font_assets));
+                    });
+            });
+    });
+}
+
 fn deactivate_player_menus(
     mut action_menu_state: ResMut<State<ActionMenuState>>,
     mut magic_menu_state: ResMut<State<MagicMenuState>>,
+    mut item_menu_state: ResMut<State<ItemMenuState>>,
 ) {
     if *magic_menu_state.current() == MagicMenuState::Active {
         magic_menu_state.set(MagicMenuState::Inactive).unwrap();
     }
     if *action_menu_state.current() == ActionMenuState::Active {
         action_menu_state.set(ActionMenuState::Inactive).unwrap();
+    }
+    if *item_menu_state.current() == ItemMenuState::Active {
+        item_menu_state.set(ItemMenuState::Inactive).unwrap();
     }
 }
 
@@ -337,6 +410,7 @@ fn idle_init(
     mut announcement_text: Query<&mut Text>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
     mut action_menu_state: ResMut<State<ActionMenuState>>,
+    mut selected_item: ResMut<SelectedItem>,
 ) {
     *announcement_text
         .get_mut(announcement.entity.unwrap())
@@ -348,7 +422,10 @@ fn idle_init(
     // Reset player battle actions.
     player_battle_action.attack = None;
     player_battle_action.block = false;
-    // player_battle_action.item = None;
+    player_battle_action.item = None;
+
+    // Reset selected item.
+    selected_item.0 = None;
 }
 
 fn action_menu_button_action(
@@ -358,6 +435,7 @@ fn action_menu_button_action(
     >,
     mut battle_state: ResMut<State<BattleState>>,
     mut magic_menu_state: ResMut<State<MagicMenuState>>,
+    mut item_menu_state: ResMut<State<ItemMenuState>>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
     player_limit: Res<global::PlayerLimitEquipped>,
     player_attack_table: Res<global::PlayerAttackTable>,
@@ -381,13 +459,24 @@ fn action_menu_button_action(
                 }
                 PlayerButtonAction::Magic => {
                     // Switch magic menu state.
+                    use MagicMenuState::*;
                     match magic_menu_state.current() {
-                        MagicMenuState::Active => {
-                            magic_menu_state.set(MagicMenuState::Inactive).unwrap()
-                        }
-                        MagicMenuState::Inactive => {
-                            magic_menu_state.set(MagicMenuState::Active).unwrap()
-                        }
+                        Active => magic_menu_state.set(Inactive).unwrap(),
+                        Inactive => magic_menu_state.set(Active).unwrap(),
+                    }
+                    if *item_menu_state.current() == ItemMenuState::Active {
+                        item_menu_state.set(ItemMenuState::Inactive).unwrap();
+                    }
+                }
+                PlayerButtonAction::Item => {
+                    // Switch item menu state.
+                    use ItemMenuState::*;
+                    match item_menu_state.current() {
+                        Active => item_menu_state.set(Inactive).unwrap(),
+                        Inactive => item_menu_state.set(Active).unwrap(),
+                    }
+                    if *magic_menu_state.current() == MagicMenuState::Active {
+                        magic_menu_state.set(MagicMenuState::Inactive).unwrap();
                     }
                 }
                 _ => todo!("Unhandled player action button!!"),
@@ -412,17 +501,48 @@ fn magic_menu_button_action(
     }
 }
 
+fn item_button_action(
+    interaction_query: Query<(&Interaction, &ItemButton), (Changed<Interaction>, With<Button>)>,
+    mut selected_item: ResMut<SelectedItem>,
+    item_table: Res<global::ItemTable>,
+) {
+    for (interaction, menu_button_action) in interaction_query.iter() {
+        if *interaction == Interaction::Clicked {
+            selected_item.0 = Some(item_table.get(&menu_button_action.0).unwrap().clone());
+        }
+    }
+}
+
+fn item_use_button_action(
+    interaction_query: Query<(&Interaction, &UseItemButton), (Changed<Interaction>, With<Button>)>,
+    selected_item: ResMut<SelectedItem>,
+    mut battle_state: ResMut<State<BattleState>>,
+    mut player_battle_action: ResMut<PlayerBattleAction>,
+) {
+    for (interaction, _) in interaction_query.iter() {
+        if *interaction == Interaction::Clicked {
+            if let Some(item) = selected_item.0.clone() {
+                battle_state.set(BattleState::PlayerAction).unwrap();
+                player_battle_action.item = Some(item);
+            }
+        }
+    }
+}
+
 fn player_attack_setup(
     mut set: ParamSet<(
         Query<&mut Text, With<ManaText>>,
         Query<&mut Style, With<ManaBar>>,
         Query<(&mut Style, &mut UiColor), With<LimitBar>>,
         Query<&mut Style, With<EnemyHPBar>>,
+        Query<&mut Text, With<HealthText>>,
+        Query<&mut Style, With<HealthBar>>,
     )>,
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
     mut enemy: ResMut<global::Enemy>,
     player_action: Res<PlayerBattleAction>,
+    mut item_inventory: ResMut<global::PlayerItemInventory>,
 ) {
     // TODO: ensure there is mp to use magic...
     if let Some(attack) = &player_action.attack {
@@ -444,7 +564,7 @@ fn player_attack_setup(
         player.stats.mp -= attack.mp_use;
 
         let announcement_text = if damage >= 0 {
-            format!("You used {}, dealing {} damage!", attack.name, damage)
+            format!("You used {}, dealing {} damage.", attack.name, damage)
         } else {
             format!(
                 "You used {}, healing {} to the enemy!",
@@ -454,16 +574,6 @@ fn player_attack_setup(
         };
 
         let _ = announcement.texts.add(announcement_text);
-
-        let player = &player.stats;
-        for mut mp_text in set.p0().iter_mut() {
-            mp_text.sections[1].value = format!("{} / {}", player.mp, player.mp_max);
-        }
-
-        let player_mp_perc = player.mp as f32 / player.mp_max as f32 * 100.;
-        for mut mp_bar in set.p1().iter_mut() {
-            mp_bar.size.width = Val::Percent(player_mp_perc);
-        }
 
         let enemy_hp_perc = enemy.stats.hp as f32 / enemy.stats.hp_max as f32 * 256.;
         for mut enemy_hp_bar in set.p3().iter_mut() {
@@ -476,7 +586,45 @@ fn player_attack_setup(
             .texts
             .add(format!("You blocked their next attack."));
     }
-    // TODO: handle use item
+
+    if let Some(item) = player_action.item.clone() {
+        if item.stats.hp > 0 {
+            player.stats.hp = std::cmp::min(player.stats.hp + item.stats.hp, player.stats.hp_max);
+            let _ = announcement.texts.add(format!(
+                "You used {}, healing {} hp.",
+                item.name, item.stats.hp
+            ));
+        } else if item.stats.mp > 0 {
+            player.stats.mp = std::cmp::min(player.stats.mp + item.stats.mp, player.stats.mp_max);
+            let _ = announcement.texts.add(format!(
+                "You used {}, healing {} mp.",
+                item.name, item.stats.mp
+            ));
+        }
+
+        *item_inventory.get_mut(&item.id).unwrap() -= 1;
+        if *item_inventory.get_mut(&item.id).unwrap() == 0 {
+            item_inventory.remove(&item.id);
+        }
+    }
+
+    for mut health_text in set.p4().iter_mut() {
+        health_text.sections[1].value = format!("{} / {}", player.stats.hp, player.stats.hp_max);
+    }
+
+    let player_hp_perc = player.stats.hp as f32 / player.stats.hp_max as f32 * 100.;
+    for mut health_bar in set.p5().iter_mut() {
+        health_bar.size.width = Val::Percent(player_hp_perc);
+    }
+
+    for mut mp_text in set.p0().iter_mut() {
+        mp_text.sections[1].value = format!("{} / {}", player.stats.mp, player.stats.mp_max);
+    }
+
+    let player_mp_perc = player.stats.mp as f32 / player.stats.mp_max as f32 * 100.;
+    for mut mp_bar in set.p1().iter_mut() {
+        mp_bar.size.width = Val::Percent(player_mp_perc);
+    }
 }
 
 fn calculate_player_attack_damage(
@@ -720,6 +868,30 @@ fn battle_update(
                 }
                 _ => (),
             }
+        }
+    }
+}
+
+fn item_list_scroll(
+    mut mouse_wheel_events: EventReader<MouseWheel>,
+    mut query_list: Query<(&mut ItemList, &mut Style, &Children, &Node)>,
+    query_item: Query<&Node>,
+) {
+    for mouse_wheel_event in mouse_wheel_events.iter() {
+        for (mut scrolling_list, mut style, children, uinode) in query_list.iter_mut() {
+            let items_height: f32 = children
+                .iter()
+                .map(|entity| query_item.get(*entity).unwrap().size.y)
+                .sum();
+            let panel_height = uinode.size.y;
+            let max_scroll = (items_height - panel_height).max(0.);
+            let dy = match mouse_wheel_event.unit {
+                MouseScrollUnit::Line => mouse_wheel_event.y * 20.,
+                MouseScrollUnit::Pixel => mouse_wheel_event.y,
+            };
+            scrolling_list.position += dy;
+            scrolling_list.position = scrolling_list.position.clamp(-max_scroll, 0.);
+            style.position.top = Val::Px(scrolling_list.position);
         }
     }
 }

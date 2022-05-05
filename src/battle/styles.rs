@@ -207,6 +207,7 @@ pub fn styled_player_action_button() -> ButtonBundle {
         style: Style {
             size: Size::new(Val::Px(250.0), Val::Percent(23.0)),
             margin: Rect::all(Val::Px(1.0)),
+            flex_shrink: 0.,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
@@ -223,25 +224,20 @@ pub fn styled_player_action_button_text(
     TextBundle {
         text: Text::with_section(
             format!("{:?}", player_button_action),
-            TextStyle {
-                font: font_assets.font.clone(),
-                font_size: 40.0,
-                color: global::TEXT_COLOR,
-            },
+            common_text_style(&font_assets),
             Default::default(),
         ),
         ..default()
     }
 }
 
-pub fn styled_player_magic_menu_container() -> NodeBundle {
+pub fn styled_player_sub_action_menu_container() -> NodeBundle {
     NodeBundle {
         style: Style {
             size: Size::new(Val::Percent(70.), Val::Percent(100.)),
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
-        color: Color::CRIMSON.into(),
         ..default()
     }
 }
@@ -250,14 +246,57 @@ pub fn styled_player_magic_button_text(text: &str, font_assets: &Res<FontAssets>
     TextBundle {
         text: Text::with_section(
             text.to_string(),
-            TextStyle {
-                // TODO: refactor.. this is shared with styled_player_action_button_text()
-                font: font_assets.font.clone(),
-                font_size: 40.0,
-                color: global::TEXT_COLOR,
-            },
+            common_text_style(&font_assets),
             Default::default(),
         ),
+        ..default()
+    }
+}
+
+pub fn styled_item_list_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            flex_direction: FlexDirection::ColumnReverse,
+            align_self: AlignSelf::Center,
+            size: Size::new(Val::Percent(100.0), Val::Percent(100.)),
+            overflow: Overflow::Hidden,
+            ..default()
+        },
+        ..default()
+    }
+}
+
+pub fn styled_item_list() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            flex_direction: FlexDirection::ColumnReverse,
+            flex_grow: 1.0,
+            max_size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+            ..default()
+        },
+        ..default()
+    }
+}
+
+pub fn styled_player_item_button_text(text: String, font_assets: &Res<FontAssets>) -> TextBundle {
+    TextBundle {
+        text: Text::with_section(text, common_text_style(&font_assets), Default::default()),
+        ..default()
+    }
+}
+
+pub fn styled_player_item_use_button() -> ButtonBundle {
+    ButtonBundle {
+        style: Style {
+            size: Size::new(Val::Px(250.0), Val::Percent(23.0)),
+            margin: Rect::all(Val::Px(1.0)),
+            flex_shrink: 0.,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            align_self: AlignSelf::FlexEnd,
+            ..default()
+        },
+        color: global::NORMAL_BUTTON.into(),
         ..default()
     }
 }

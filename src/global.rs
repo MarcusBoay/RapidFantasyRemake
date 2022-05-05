@@ -156,7 +156,7 @@ impl FromWorld for PlayerLimitEquipped {
 // TODO: add player limit inventory
 // TODO: add player attack inventory
 
-#[derive(Deref)]
+#[derive(Deref, DerefMut)]
 pub(crate) struct PlayerItemInventory(pub(crate) HashMap<usize, usize>); // id, quantity, TODO: maybe replace id with Item...
 
 impl FromWorld for PlayerItemInventory {
@@ -251,6 +251,7 @@ pub(crate) struct EnemyTable {
     pub(crate) table: HashMap<usize, (EnemyStats, Stats, Vec<EnemyAttack>)>,
 }
 
+#[derive(Clone)]
 pub(crate) enum ItemType {
     Consumable,
     Weapon,
@@ -258,6 +259,7 @@ pub(crate) enum ItemType {
     Accessory,
 }
 
+#[derive(Clone)]
 pub(crate) struct ItemStats {
     pub(crate) hp_max: i32,
     pub(crate) mp_max: i32,
@@ -300,6 +302,7 @@ impl ItemStats {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct Item {
     pub(crate) id: usize,
     pub(crate) name: String,

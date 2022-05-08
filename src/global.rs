@@ -232,6 +232,7 @@ pub(crate) struct Enemy {
     pub(crate) stats: Stats,
     pub(crate) enemy_stats: EnemyStats,
     pub(crate) attacks: Vec<EnemyAttack>,
+    pub(crate) loot_table: Vec<LootTable>,
 }
 
 #[derive(Component, Clone, Default)]
@@ -241,7 +242,7 @@ pub(crate) struct EnemyStats {
     pub(crate) description: String,
     pub(crate) element: Option<Element>,
     pub(crate) next_phase: Option<usize>, // id? maybe another enemystats?
-} // TODO: implement enemy table
+}
 
 #[derive(Clone)]
 pub(crate) enum EnemyAttackType {
@@ -350,6 +351,7 @@ impl Item {
 #[derive(Deref)]
 pub(crate) struct ItemTable(pub(crate) HashMap<usize, Item>);
 
+#[derive(Clone)]
 pub(crate) struct LootTable {
     pub(crate) no_drop_weight: usize,
     pub(crate) items: Vec<(usize, usize)>, // item id, weight
@@ -395,6 +397,15 @@ mod tests {
             items: vec![],
         };
         assert_eq!(None, loot_table.get_item_id());
+    }
+
+    #[test]
+    fn loot_table_get_zero_no_drop_weight() {
+        let loot_table = LootTable {
+            no_drop_weight: 0,
+            items: vec![(1, 3)],
+        };
+        assert_eq!(Some(1), loot_table.get_item_id());
     }
 
     #[test]

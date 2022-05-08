@@ -823,7 +823,9 @@ fn calculate_enemy_attack_damage(
 fn win_setup(
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
+    mut player_item_inv: ResMut<global::PlayerItemInventory>,
     mut player_attack_inv: ResMut<global::PlayerAttackInventory>,
+    item_table: Res<global::ItemTable>,
     enemy: Res<global::Enemy>,
     attack_table: Res<global::PlayerAttackTable>,
 ) {
@@ -882,7 +884,18 @@ fn win_setup(
         player.experience = 1;
     }
 
-    // TODO: gain loot
+    for loot_table in &enemy.loot_table {
+        if let Some(drop_item_id) = loot_table.get_item_id() {
+            player_item_inv
+                .entry(drop_item_id)
+                .and_modify(|e| *e += 1)
+                .or_insert(1);
+            let item_name = item_table.get(&drop_item_id).unwrap().clone().name;
+            let _ = announcement
+                .texts
+                .add(format!("You've gained {}", item_name));
+        }
+    }
 }
 
 fn lose_setup(mut announcement: ResMut<Announcement>, enemy: Res<global::Enemy>) {

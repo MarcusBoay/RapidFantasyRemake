@@ -260,16 +260,18 @@ fn spawn_monster(
         if should_spawn_enemy_roll {
             let enemy_id_roll = area_enemies.choose(&mut rand::thread_rng()).unwrap();
             let spawned_enemy = enemy_table.table.get(enemy_id_roll).unwrap();
-            let (enemy_stats, stats, attacks) = (
+            let (enemy_stats, stats, attacks, loot_table) = (
                 spawned_enemy.0.clone(),
                 spawned_enemy.1.clone(),
                 spawned_enemy.2.clone(),
+                spawned_enemy.3.clone(),
             );
 
             enemy.entity = Some(commands.spawn().id());
             enemy.stats = stats;
             enemy.enemy_stats = enemy_stats;
             enemy.attacks = attacks;
+            enemy.loot_table = loot_table;
             game_state.set(global::GameState::Battle).unwrap();
 
             player_steps.0 = 0.;

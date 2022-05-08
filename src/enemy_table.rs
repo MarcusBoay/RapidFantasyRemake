@@ -1,7 +1,9 @@
 use bevy::{prelude::*, utils::HashMap};
 
 use crate::{
-    global::{Element::*, EnemyAttack, EnemyAttackType::*, EnemyStats, EnemyTable, Stats},
+    global::{
+        Element::*, EnemyAttack, EnemyAttackType::*, EnemyStats, EnemyTable, LootTable, Stats,
+    },
     ImageAssets,
 };
 
@@ -34,6 +36,26 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy1.clone(),
                 },
                 vec![EnemyAttack::new("Bounce", 2., None, 0)],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(0, 9), (5, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (10, 1),
+                            (11, 1),
+                            (12, 1),
+                            (19, 1),
+                            (20, 1),
+                            (21, 1),
+                            (28, 1),
+                            (29, 1),
+                            (30, 1),
+                        ],
+                    },
+                ],
             ),
         );
         enemies.insert(
@@ -60,6 +82,26 @@ impl FromWorld for EnemyTable {
                     battle_sprite: image_assets.enemy2.clone(),
                 },
                 vec![EnemyAttack::new("Rock throw", 2., None, 0)],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(0, 9), (5, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (10, 1),
+                            (11, 1),
+                            (12, 1),
+                            (19, 1),
+                            (20, 1),
+                            (21, 1),
+                            (28, 1),
+                            (29, 1),
+                            (30, 1),
+                        ],
+                    },
+                ],
             ),
         );
         enemies.insert(
@@ -90,6 +132,26 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Hallucinate", 2., Some(Magic), 5),
                     EnemyAttack::new("Spores", 2.5, None, 0),
                 ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(0, 9), (5, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (10, 1),
+                            (11, 1),
+                            (12, 1),
+                            (19, 1),
+                            (20, 1),
+                            (21, 1),
+                            (28, 1),
+                            (29, 1),
+                            (30, 1),
+                        ],
+                    },
+                ],
             ),
         );
         enemies.insert(
@@ -118,6 +180,26 @@ impl FromWorld for EnemyTable {
                 vec![
                     EnemyAttack::new("Tackle", 2., None, 0),
                     EnemyAttack::new("Explosion", 3., Some(Magic), 4),
+                ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(1, 9), (6, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (10, 1),
+                            (11, 1),
+                            (12, 1),
+                            (19, 1),
+                            (20, 1),
+                            (21, 1),
+                            (28, 1),
+                            (29, 1),
+                            (30, 1),
+                        ],
+                    },
                 ],
             ),
         );
@@ -148,6 +230,26 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Hit", 2., None, 0),
                     EnemyAttack::new("Spark", 2., Some(Magic), 5),
                 ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(1, 9), (6, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (10, 1),
+                            (11, 1),
+                            (12, 1),
+                            (19, 1),
+                            (20, 1),
+                            (21, 1),
+                            (28, 1),
+                            (29, 1),
+                            (30, 1),
+                        ],
+                    },
+                ],
             ),
         );
         enemies.insert(
@@ -176,6 +278,26 @@ impl FromWorld for EnemyTable {
                 vec![
                     EnemyAttack::new("Bone Crush", 2., None, 0),
                     EnemyAttack::new("Curse", 2., Some(Magic), 5),
+                ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(2, 9), (7, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (13, 1),
+                            (14, 1),
+                            (15, 1),
+                            (22, 1),
+                            (23, 1),
+                            (24, 1),
+                            (31, 1),
+                            (32, 1),
+                            (33, 1),
+                        ],
+                    },
                 ],
             ),
         );
@@ -207,6 +329,26 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Lay A Verse", 1.8, Some(Magic), 4),
                     EnemyAttack::new("Tangle", 2., None, 0),
                 ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(2, 9), (7, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (13, 1),
+                            (14, 1),
+                            (15, 1),
+                            (22, 1),
+                            (23, 1),
+                            (24, 1),
+                            (31, 1),
+                            (32, 1),
+                            (33, 1),
+                        ],
+                    },
+                ],
             ),
         );
         enemies.insert(
@@ -236,6 +378,26 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Bite", 2., None, 0),
                     EnemyAttack::new("Gnaw", 1.5, None, 0),
                     EnemyAttack::new("Acornucopia of pain", 2., Some(Magic), 5),
+                ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(3, 9), (8, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (13, 1),
+                            (14, 1),
+                            (15, 1),
+                            (22, 1),
+                            (23, 1),
+                            (24, 1),
+                            (31, 1),
+                            (32, 1),
+                            (33, 1),
+                        ],
+                    },
                 ],
             ),
         );
@@ -267,6 +429,26 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Confusion", 2., Some(Magic), 6),
                     EnemyAttack::new("Face the Book", 2.2, None, 0),
                 ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(3, 9), (8, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (13, 1),
+                            (14, 1),
+                            (15, 1),
+                            (22, 1),
+                            (23, 1),
+                            (24, 1),
+                            (31, 1),
+                            (32, 1),
+                            (33, 1),
+                        ],
+                    },
+                ],
             ),
         );
         enemies.insert(
@@ -297,6 +479,26 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Thunder Shock", 2., Some(Magic), 10),
                     EnemyAttack::new("Thunder Wave", 1.8, Some(Magic), 5),
                 ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(4, 9), (9, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (16, 1),
+                            (17, 1),
+                            (18, 1),
+                            (25, 1),
+                            (26, 1),
+                            (27, 1),
+                            (34, 1),
+                            (35, 1),
+                            (36, 1),
+                        ],
+                    },
+                ],
             ),
         );
         enemies.insert(
@@ -326,6 +528,26 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Water Gun", 2., Some(Magic), 8),
                     EnemyAttack::new("Doot Doot", 2., None, 0),
                     EnemyAttack::new("Peck", 1.8, None, 0),
+                ],
+                vec![
+                    LootTable {
+                        no_drop_weight: 10,
+                        items: vec![(4, 9), (9, 6)],
+                    },
+                    LootTable {
+                        no_drop_weight: 13,
+                        items: vec![
+                            (16, 1),
+                            (17, 1),
+                            (18, 1),
+                            (25, 1),
+                            (26, 1),
+                            (27, 1),
+                            (34, 1),
+                            (35, 1),
+                            (36, 1),
+                        ],
+                    },
                 ],
             ),
         );
@@ -358,6 +580,7 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Peck", 2.2, None, 0),
                     EnemyAttack::new("Flamethrower", 2.2, Some(Magic), 12),
                 ],
+                vec![],
             ),
         );
         enemies.insert(
@@ -389,6 +612,7 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Tesla Contact", 2.2, None, 0),
                     EnemyAttack::new("Monarch\'s Thunder", 2.2, Some(Magic), 7),
                 ],
+                vec![],
             ),
         );
         enemies.insert(
@@ -419,6 +643,7 @@ impl FromWorld for EnemyTable {
                     EnemyAttack::new("Tsunami", 2.5, Some(Magic), 7),
                     EnemyAttack::new("Royal Decree", 0.5, Some(Percentile), 30),
                 ],
+                vec![],
             ),
         );
 

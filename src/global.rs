@@ -274,7 +274,7 @@ impl EnemyAttack {
 }
 
 pub(crate) struct EnemyTable {
-    pub(crate) table: HashMap<usize, (EnemyStats, Stats, Vec<EnemyAttack>)>,
+    pub(crate) table: HashMap<usize, (EnemyStats, Stats, Vec<EnemyAttack>, Vec<LootTable>)>,
 }
 
 #[derive(Clone)]

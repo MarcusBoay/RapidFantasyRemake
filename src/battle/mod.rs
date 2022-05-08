@@ -314,8 +314,8 @@ fn spawn_action_menu(
             p.spawn_bundle(styled_player_action_button())
                 .insert(player_button_action.clone())
                 .with_children(|p| {
-                    p.spawn_bundle(styled_player_action_button_text(
-                        &player_button_action,
+                    p.spawn_bundle(styled_text_bundle(
+                        format!("{:?}", &player_button_action),
                         &font_assets,
                     ));
                 });
@@ -335,15 +335,12 @@ fn spawn_magic_menu(
                 p.spawn_bundle(styled_player_action_button())
                     .insert(magic.clone())
                     .with_children(|p| {
-                        p.spawn_bundle(styled_player_magic_button_text(
-                            &magic.name[..],
-                            &font_assets,
-                        ));
+                        p.spawn_bundle(styled_text_bundle(&magic.name[..], &font_assets));
                     });
             } else {
                 p.spawn_bundle(styled_player_action_button())
                     .with_children(|p| {
-                        p.spawn_bundle(styled_player_magic_button_text("-", &font_assets));
+                        p.spawn_bundle(styled_text_bundle("-", &font_assets));
                     });
             }
         }
@@ -501,10 +498,22 @@ fn magic_menu_button_action(
     font_assets: Res<FontAssets>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
+        // despawn description
+        if let Ok(children) = children_query.get(desc_container.single()) {
+            for child in children.iter() {
+                commands.entity(*child).despawn_recursive();
+            }
+        }
         if *interaction == Interaction::Clicked {
             if player.stats.mp >= menu_button_action.mp_use {
                 battle_state.set(BattleState::PlayerAction).unwrap();
                 player_battle_action.attack = Some(menu_button_action.clone());
+            } else {
+                commands
+                    .entity(desc_container.single_mut())
+                    .with_children(|p| {
+                        p.spawn_bundle(styled_text_bundle("Not enough MP!", &font_assets));
+                    });
             }
         } else if *interaction == Interaction::Hovered {
             commands
@@ -519,22 +528,8 @@ fn magic_menu_button_action(
                         "Deals Tier {} {} damage.\nCosts {} MP",
                         menu_button_action.tier, element, menu_button_action.mp_use
                     );
-                    p.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            desc_text,
-                            common_text_style(&font_assets),
-                            Default::default(),
-                        ),
-                        ..default()
-                    });
+                    p.spawn_bundle(styled_text_bundle(desc_text, &font_assets));
                 });
-        } else {
-            // TODO: modify despawn_children() in main.rs to accept references?
-            if let Ok(children) = children_query.get(desc_container.single()) {
-                for child in children.iter() {
-                    commands.entity(*child).despawn_recursive();
-                }
-            }
         }
     }
 }
@@ -598,7 +593,6 @@ fn player_attack_setup(
     player_action: Res<PlayerBattleAction>,
     mut item_inventory: ResMut<global::PlayerItemInventory>,
 ) {
-    // TODO: ensure there is mp to use magic...
     if let Some(attack) = &player_action.attack {
         let damage = calculate_player_attack_damage(&attack, &player, &enemy);
 

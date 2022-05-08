@@ -12,6 +12,13 @@ pub fn common_text_style(font_assets: &Res<FontAssets>) -> TextStyle {
     }
 }
 
+pub fn styled_text_bundle<T: Into<String>>(text: T, font_assets: &Res<FontAssets>) -> TextBundle {
+    TextBundle {
+        text: Text::with_section(text, common_text_style(&font_assets), Default::default()),
+        ..default()
+    }
+}
+
 pub fn styled_battle_screen() -> NodeBundle {
     NodeBundle {
         style: Style {
@@ -217,20 +224,6 @@ pub fn styled_player_action_button() -> ButtonBundle {
     }
 }
 
-pub fn styled_player_action_button_text(
-    player_button_action: &PlayerButtonAction,
-    font_assets: &Res<FontAssets>,
-) -> TextBundle {
-    TextBundle {
-        text: Text::with_section(
-            format!("{:?}", player_button_action),
-            common_text_style(&font_assets),
-            Default::default(),
-        ),
-        ..default()
-    }
-}
-
 pub fn styled_player_sub_action_menu_container() -> NodeBundle {
     NodeBundle {
         style: Style {
@@ -238,17 +231,6 @@ pub fn styled_player_sub_action_menu_container() -> NodeBundle {
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
-        ..default()
-    }
-}
-
-pub fn styled_player_magic_button_text(text: &str, font_assets: &Res<FontAssets>) -> TextBundle {
-    TextBundle {
-        text: Text::with_section(
-            text.to_string(),
-            common_text_style(&font_assets),
-            Default::default(),
-        ),
         ..default()
     }
 }

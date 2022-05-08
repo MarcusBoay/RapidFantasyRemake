@@ -24,10 +24,11 @@ fn main() {
     .insert_resource(ClearColor(global::BACKGROUND_COLOR))
     .init_resource::<global::PlayerAttackTable>()
     .init_resource::<global::ItemTable>()
-    .init_resource::<global::Player>()
-    .init_resource::<global::PlayerMagicEquipped>()
-    .init_resource::<global::PlayerLimitEquipped>()
-    .init_resource::<global::PlayerItemInventory>()
+    .init_resource::<global::Player>() // TODO: put in main menu
+    .init_resource::<global::PlayerMagicEquipped>() // TODO: put in main menu
+    .init_resource::<global::PlayerLimitEquipped>() // TODO: put in main menu
+    .init_resource::<global::PlayerItemInventory>() // TODO: put in main menu
+    .init_resource::<global::PlayerAttackInventory>() // TODO: put in main menu
     .init_resource::<global::Enemy>()
     .add_state(global::GameState::Initialization)
     .add_startup_system(setup_main)

@@ -1,4 +1,8 @@
-use bevy::{math::const_vec2, prelude::*, utils::HashMap};
+use bevy::{
+    math::const_vec2,
+    prelude::*,
+    utils::{HashMap, HashSet},
+};
 use rand::{thread_rng, Rng};
 
 use crate::ImageAssets;
@@ -86,13 +90,13 @@ pub(crate) struct Stats {
     pub(crate) battle_sprite: Handle<Image>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) enum PlayerAttackType {
     Limit,
     Magic,
 }
 
-#[derive(Default, Clone, Component)]
+#[derive(Default, Clone, Component, Hash, PartialEq, Eq)]
 pub(crate) struct PlayerAttack {
     pub(crate) id: usize,
     pub(crate) name: String,
@@ -153,8 +157,30 @@ impl FromWorld for PlayerLimitEquipped {
     }
 }
 
-// TODO: add player limit inventory
-// TODO: add player attack inventory
+#[derive(Deref, DerefMut)]
+pub(crate) struct PlayerAttackInventory(pub(crate) HashSet<PlayerAttack>);
+
+impl FromWorld for PlayerAttackInventory {
+    fn from_world(world: &mut World) -> Self {
+        let attack_table = world
+            .get_resource_mut::<PlayerAttackTable>()
+            .unwrap()
+            .table
+            .clone();
+        let mut attacks = HashSet::new();
+
+        // Player starts out with tier 1 limit and magic.
+        attacks.insert(attack_table.get(&0).unwrap().clone());
+
+        attacks.insert(attack_table.get(&1).unwrap().clone());
+
+        for i in 4..10 {
+            attacks.insert(attack_table.get(&i).unwrap().clone());
+        }
+
+        Self(attacks)
+    }
+}
 
 #[derive(Deref, DerefMut)]
 pub(crate) struct PlayerItemInventory(pub(crate) HashMap<usize, usize>); // id, quantity, TODO: maybe replace id with Item...

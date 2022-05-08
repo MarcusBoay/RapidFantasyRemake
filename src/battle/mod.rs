@@ -823,7 +823,9 @@ fn calculate_enemy_attack_damage(
 fn win_setup(
     mut announcement: ResMut<Announcement>,
     mut player: ResMut<global::Player>,
+    mut player_attack_inv: ResMut<global::PlayerAttackInventory>,
     enemy: Res<global::Enemy>,
+    attack_table: Res<global::PlayerAttackTable>,
 ) {
     let mut player = &mut player.stats;
     let enemy_name = enemy.enemy_stats.name.clone();
@@ -849,6 +851,33 @@ fn win_setup(
         player.mp = player.mp_max;
 
         let _ = announcement.texts.add(format!("You leveled up!"));
+
+        let attack_table = attack_table.table.clone();
+        if player.level == 2 {
+            let _ = announcement
+                .texts
+                .add(format!("You've unlocked tier 2 limit break!"));
+            player_attack_inv.insert(attack_table.get(&2).unwrap().clone());
+        } else if player.level == 3 {
+            let _ = announcement
+                .texts
+                .add(format!("You've unlocked tier 2 magic!"));
+            for i in 10..16 {
+                player_attack_inv.insert(attack_table.get(&i).unwrap().clone());
+            }
+        } else if player.level == 4 {
+            let _ = announcement
+                .texts
+                .add(format!("You've unlocked tier 3 limit break!"));
+            player_attack_inv.insert(attack_table.get(&3).unwrap().clone());
+        } else if player.level == 5 {
+            let _ = announcement
+                .texts
+                .add(format!("You've unlocked tier 3 magic!"));
+            for i in 16..22 {
+                player_attack_inv.insert(attack_table.get(&i).unwrap().clone());
+            }
+        }
     } else if player.level == 5 {
         player.experience = 1;
     }

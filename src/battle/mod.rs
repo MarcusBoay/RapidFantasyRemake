@@ -858,27 +858,27 @@ fn win_setup(
         if player.level == 2 {
             let _ = announcement
                 .texts
-                .add(format!("You've unlocked tier 2 limit break!"));
-            player_attack_inv.insert(attack_table.get(&2).unwrap().clone());
-        } else if player.level == 3 {
-            let _ = announcement
-                .texts
                 .add(format!("You've unlocked tier 2 magic!"));
             for i in 10..16 {
                 player_attack_inv.insert(attack_table.get(&i).unwrap().clone());
             }
-        } else if player.level == 4 {
+        } else if player.level == 3 {
             let _ = announcement
                 .texts
-                .add(format!("You've unlocked tier 3 limit break!"));
-            player_attack_inv.insert(attack_table.get(&3).unwrap().clone());
-        } else if player.level == 5 {
+                .add(format!("You've unlocked tier 2 limit break!"));
+            player_attack_inv.insert(attack_table.get(&2).unwrap().clone());
+        } else if player.level == 4 {
             let _ = announcement
                 .texts
                 .add(format!("You've unlocked tier 3 magic!"));
             for i in 16..22 {
                 player_attack_inv.insert(attack_table.get(&i).unwrap().clone());
             }
+        } else if player.level == 5 {
+            let _ = announcement
+                .texts
+                .add(format!("You've unlocked tier 3 limit break!"));
+            player_attack_inv.insert(attack_table.get(&3).unwrap().clone());
         }
     } else if player.level == 5 {
         player.experience = 1;

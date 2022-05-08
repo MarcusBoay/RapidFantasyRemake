@@ -20,7 +20,6 @@ impl Plugin for BattlePlugin {
             .add_state(ItemMenuState::Inactive)
             .init_resource::<Announcement>()
             .init_resource::<PlayerBattleAction>()
-            .init_resource::<SelectedItem>()
             .add_system_set(
                 SystemSet::on_enter(global::GameState::Battle).with_system(battle_setup),
             )
@@ -34,30 +33,34 @@ impl Plugin for BattlePlugin {
                     .with_system(action_menu_button_action)
                     .with_system(magic_menu_button_action)
                     .with_system(item_button_action)
-                    .with_system(item_use_button_action)
                     .with_system(item_list_scroll),
             )
             .add_system_set(
-                SystemSet::on_exit(BattleState::Idle).with_system(deactivate_player_menus),
+                SystemSet::on_exit(BattleState::Idle)
+                    .with_system(deactivate_player_menus)
+                    .with_system(despawn_children::<SubSubActionMenuDescContainer>),
             )
             .add_system_set(
                 SystemSet::on_enter(ActionMenuState::Active).with_system(spawn_action_menu),
             )
             .add_system_set(
                 SystemSet::on_exit(ActionMenuState::Active)
-                    .with_system(despawn_children::<ActionMenu>),
+                    .with_system(despawn_children::<ActionMenu>)
+                    .with_system(despawn_children::<SubSubActionMenuDescContainer>),
             )
             .add_system_set(
                 SystemSet::on_enter(MagicMenuState::Active).with_system(spawn_magic_menu),
             )
             .add_system_set(
                 SystemSet::on_exit(MagicMenuState::Active)
-                    .with_system(despawn_children::<SubActionMenu>),
+                    .with_system(despawn_children::<SubActionMenu>)
+                    .with_system(despawn_children::<SubSubActionMenuDescContainer>),
             )
             .add_system_set(SystemSet::on_enter(ItemMenuState::Active).with_system(spawn_item_menu))
             .add_system_set(
                 SystemSet::on_exit(ItemMenuState::Active)
-                    .with_system(despawn_children::<SubActionMenu>),
+                    .with_system(despawn_children::<SubActionMenu>)
+                    .with_system(despawn_children::<SubSubActionMenuDescContainer>),
             )
             .add_system_set(
                 SystemSet::on_enter(BattleState::PlayerAction).with_system(player_attack_setup),
@@ -128,6 +131,12 @@ pub enum PlayerButtonAction {
 #[derive(Component)]
 struct SubActionMenu;
 
+#[derive(Component)]
+struct SubSubActionMenu;
+
+#[derive(Component)]
+struct SubSubActionMenuDescContainer;
+
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum MagicMenuState {
     Active,
@@ -142,9 +151,6 @@ enum ItemMenuState {
 
 #[derive(Component, Deref)]
 struct ItemButton(usize); // holds item id
-
-#[derive(Deref, Default)]
-struct SelectedItem(Option<global::Item>);
 
 #[derive(Component)]
 struct UseItemButton;
@@ -259,6 +265,12 @@ fn battle_setup(
                                 .insert(ActionMenu);
                             p.spawn_bundle(styled_player_sub_action_menu_container())
                                 .insert(SubActionMenu);
+                            p.spawn_bundle(styled_player_sub_sub_action_menu_container())
+                                .insert(SubSubActionMenu)
+                                .with_children(|p| {
+                                    p.spawn_bundle(styled_player_sub_sub_menu_desc_container())
+                                        .insert(SubSubActionMenuDescContainer);
+                                });
                         });
                 });
 
@@ -366,11 +378,6 @@ fn spawn_item_menu(
                                 });
                         }
                     });
-                p.spawn_bundle(styled_player_item_use_button())
-                    .insert(UseItemButton)
-                    .with_children(|p| {
-                        p.spawn_bundle(styled_player_magic_button_text("Use Item", &font_assets));
-                    });
             });
     });
 }
@@ -410,7 +417,6 @@ fn idle_init(
     mut announcement_text: Query<&mut Text>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
     mut action_menu_state: ResMut<State<ActionMenuState>>,
-    mut selected_item: ResMut<SelectedItem>,
 ) {
     *announcement_text
         .get_mut(announcement.entity.unwrap())
@@ -423,9 +429,6 @@ fn idle_init(
     player_battle_action.attack = None;
     player_battle_action.block = false;
     player_battle_action.item = None;
-
-    // Reset selected item.
-    selected_item.0 = None;
 }
 
 fn action_menu_button_action(
@@ -479,51 +482,102 @@ fn action_menu_button_action(
                         magic_menu_state.set(MagicMenuState::Inactive).unwrap();
                     }
                 }
-                _ => todo!("Unhandled player action button!!"),
             }
         }
     }
 }
 
 fn magic_menu_button_action(
+    mut commands: Commands,
+    children_query: Query<&Children>,
     interaction_query: Query<
         (&Interaction, &global::PlayerAttack),
         (Changed<Interaction>, With<Button>),
     >,
+    mut desc_container: Query<Entity, With<SubSubActionMenuDescContainer>>,
     mut battle_state: ResMut<State<BattleState>>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
+    player: Res<global::Player>,
+    font_assets: Res<FontAssets>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         if *interaction == Interaction::Clicked {
-            battle_state.set(BattleState::PlayerAction).unwrap();
-            player_battle_action.attack = Some(menu_button_action.clone());
+            if player.stats.mp >= menu_button_action.mp_use {
+                battle_state.set(BattleState::PlayerAction).unwrap();
+                player_battle_action.attack = Some(menu_button_action.clone());
+            }
+        } else if *interaction == Interaction::Hovered {
+            commands
+                .entity(desc_container.single_mut())
+                .with_children(|p| {
+                    let element = if let Some(e) = &menu_button_action.element {
+                        format!("{:?}", e)
+                    } else {
+                        "Normal".to_string()
+                    };
+                    let desc_text = format!(
+                        "Deals Tier {} {} damage.\nCosts {} MP",
+                        menu_button_action.tier, element, menu_button_action.mp_use
+                    );
+                    p.spawn_bundle(TextBundle {
+                        text: Text::with_section(
+                            desc_text,
+                            common_text_style(&font_assets),
+                            Default::default(),
+                        ),
+                        ..default()
+                    });
+                });
+        } else {
+            // TODO: modify despawn_children() in main.rs to accept references?
+            if let Ok(children) = children_query.get(desc_container.single()) {
+                for child in children.iter() {
+                    commands.entity(*child).despawn_recursive();
+                }
+            }
         }
     }
 }
 
 fn item_button_action(
+    mut commands: Commands,
+    children_query: Query<&Children>,
     interaction_query: Query<(&Interaction, &ItemButton), (Changed<Interaction>, With<Button>)>,
-    mut selected_item: ResMut<SelectedItem>,
-    item_table: Res<global::ItemTable>,
-) {
-    for (interaction, menu_button_action) in interaction_query.iter() {
-        if *interaction == Interaction::Clicked {
-            selected_item.0 = Some(item_table.get(&menu_button_action.0).unwrap().clone());
-        }
-    }
-}
-
-fn item_use_button_action(
-    interaction_query: Query<(&Interaction, &UseItemButton), (Changed<Interaction>, With<Button>)>,
-    selected_item: ResMut<SelectedItem>,
+    mut desc_container: Query<Entity, With<SubSubActionMenuDescContainer>>,
     mut battle_state: ResMut<State<BattleState>>,
     mut player_battle_action: ResMut<PlayerBattleAction>,
+    item_table: Res<global::ItemTable>,
+    font_assets: Res<FontAssets>,
 ) {
-    for (interaction, _) in interaction_query.iter() {
+    for (interaction, menu_button_action) in interaction_query.iter() {
+        let this_item = item_table.get(&menu_button_action.0).unwrap().clone();
         if *interaction == Interaction::Clicked {
-            if let Some(item) = selected_item.0.clone() {
-                battle_state.set(BattleState::PlayerAction).unwrap();
-                player_battle_action.item = Some(item);
+            player_battle_action.item = Some(this_item);
+            battle_state.set(BattleState::PlayerAction).unwrap();
+        } else if *interaction == Interaction::Hovered {
+            commands
+                .entity(desc_container.single_mut())
+                .with_children(|p| {
+                    let desc_text = if this_item.stats.hp > 0 {
+                        format!("Heals {} HP", this_item.stats.hp)
+                    } else {
+                        format!("Heals {} MP", this_item.stats.mp)
+                    };
+                    p.spawn_bundle(TextBundle {
+                        text: Text::with_section(
+                            desc_text,
+                            common_text_style(&font_assets),
+                            Default::default(),
+                        ),
+                        ..default()
+                    });
+                });
+        } else {
+            // TODO: modify despawn_children() in main.rs to accept references?
+            if let Ok(children) = children_query.get(desc_container.single()) {
+                for child in children.iter() {
+                    commands.entity(*child).despawn_recursive();
+                }
             }
         }
     }
@@ -591,11 +645,11 @@ fn player_attack_setup(
         let mut item_announce_text = format!("You used {}, healing", item.name);
         if item.stats.hp > 0 {
             player.stats.hp = std::cmp::min(player.stats.hp + item.stats.hp, player.stats.hp_max);
-            item_announce_text.push_str(&format!(" {} hp", item.stats.hp)[..]);
+            item_announce_text.push_str(&format!(" {} HP", item.stats.hp)[..]);
         }
         if item.stats.mp > 0 {
             player.stats.mp = std::cmp::min(player.stats.mp + item.stats.mp, player.stats.mp_max);
-            item_announce_text.push_str(&format!(" {} mp", item.stats.mp)[..]);
+            item_announce_text.push_str(&format!(" {} MP", item.stats.mp)[..]);
         }
 
         // Decrement item and remove if reach 0.

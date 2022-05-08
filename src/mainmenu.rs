@@ -149,8 +149,9 @@ fn menu_action(
                     game_state.set(global::GameState::Overworld).unwrap();
                     menu_state.set(MenuState::Disabled).unwrap();
                     player.stats = global::Stats::new(image_assets.player_battle.clone());
+                    // TODO: set player inventories to new game
                 }
-                _ => unimplemented!("Unhandled menu button action!!"), // TODO
+                _ => todo!("Unhandled menu button action!!"), // TODO
             }
         }
     }

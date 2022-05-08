@@ -234,7 +234,7 @@ pub fn styled_player_action_button_text(
 pub fn styled_player_sub_action_menu_container() -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(70.), Val::Percent(100.)),
+            size: Size::new(Val::Percent(30.), Val::Percent(100.)),
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
         },
@@ -285,18 +285,27 @@ pub fn styled_player_item_button_text(text: String, font_assets: &Res<FontAssets
     }
 }
 
-pub fn styled_player_item_use_button() -> ButtonBundle {
-    ButtonBundle {
+pub fn styled_player_sub_sub_action_menu_container() -> NodeBundle {
+    NodeBundle {
         style: Style {
-            size: Size::new(Val::Px(250.0), Val::Percent(23.0)),
-            margin: Rect::all(Val::Px(1.0)),
-            flex_shrink: 0.,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            align_self: AlignSelf::FlexEnd,
+            size: Size::new(Val::Percent(45.), Val::Percent(100.)),
+            flex_direction: FlexDirection::ColumnReverse,
+            flex_grow: 1.,
             ..default()
         },
-        color: global::NORMAL_BUTTON.into(),
+        ..default()
+    }
+}
+
+pub fn styled_player_sub_sub_menu_desc_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.), Val::Percent(75.)),
+            flex_direction: FlexDirection::ColumnReverse,
+            align_content: AlignContent::FlexStart,
+            margin: Rect::all(Val::Px(6.0)),
+            ..default()
+        },
         ..default()
     }
 }

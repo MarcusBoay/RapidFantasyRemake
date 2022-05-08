@@ -15,9 +15,6 @@ impl Plugin for MainMenuPlugin {
                     .with_system(menu_action)
                     .with_system(button_system),
             )
-            // .add_system_set(SystemSet::on_exit())
-            .add_system(change_window_settings) // TODO: settings screen..
-            // When exiting the state, despawn everything that was spawned for this screen
             .add_system_set(
                 SystemSet::on_exit(global::GameState::MainMenu)
                     .with_system(despawn_screen::<MainMenuScreen>),
@@ -65,7 +62,6 @@ fn main_menu_setup(
         menu_state.set(MenuState::Main).unwrap();
     }
 
-    // Common style for all buttons on the screen
     let button_style = Style {
         size: Size::new(Val::Px(250.0), Val::Px(65.0)),
         margin: Rect::all(Val::Px(20.0)),
@@ -73,21 +69,7 @@ fn main_menu_setup(
         align_items: AlignItems::Center,
         ..default()
     };
-    // let button_icon_style = Style {
-    //     size: Size::new(Val::Px(30.0), Val::Auto),
-    //     // This takes the icons out of the flexbox flow, to be positionned exactly
-    //     position_type: PositionType::Absolute,
-    //     // The icon will be close to the left border of the button
-    //     position: Rect {
-    //         left: Val::Px(10.0),
-    //         right: Val::Auto,
-    //         top: Val::Auto,
-    //         bottom: Val::Auto,
-    //     },
-    //     ..default()
-    // };
     let button_text_style = TextStyle {
-        // font: Default::default(),
         font: font_assets.font.clone(),
         font_size: 40.0,
         color: global::TEXT_COLOR,
@@ -153,18 +135,6 @@ fn menu_action(
                 }
                 _ => todo!("Unhandled menu button action!!"), // TODO
             }
-        }
-    }
-}
-
-// TODO: make this a button in the settings menu
-fn change_window_settings(input: Res<Input<KeyCode>>, mut windows: ResMut<Windows>) {
-    let window = windows.primary_mut();
-    if input.just_pressed(KeyCode::O) {
-        if window.mode() == WindowMode::Windowed {
-            window.set_mode(WindowMode::Fullscreen);
-        } else {
-            window.set_mode(WindowMode::Windowed);
         }
     }
 }

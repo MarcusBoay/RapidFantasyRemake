@@ -157,6 +157,13 @@ impl FromWorld for PlayerLimitEquipped {
     }
 }
 
+#[derive(Default)]
+pub(crate) struct PlayerEquipmentEquipped {
+    weapon: Option<Item>,
+    armor: Option<Item>,
+    accessory: Option<Item>,
+}
+
 #[derive(Deref, DerefMut)]
 pub(crate) struct PlayerAttackInventory(pub(crate) HashSet<PlayerAttack>);
 

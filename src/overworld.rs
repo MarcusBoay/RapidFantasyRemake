@@ -26,6 +26,7 @@ impl Plugin for OverworldPlugin {
                     .with_system(move_player)
                     .with_system(change_player_image)
                     .with_system(spawn_monster)
+                    .with_system(open_menu)
                     .with_system(go_to_area),
             )
             // When exiting the state, despawn everything that was spawned for this screen
@@ -239,7 +240,6 @@ fn change_player_image(
 
 // TODO: spawn final boss monster during interaction
 fn spawn_monster(
-    // keyboard_input: Res<Input<KeyCode>>,
     mut player_steps: ResMut<PlayerSteps>,
     mut game_state: ResMut<State<global::GameState>>,
     mut commands: Commands,
@@ -278,5 +278,14 @@ fn spawn_monster(
         } else {
             player_steps.0 = MIN_ENEMY_SPAWN_STEPS;
         }
+    }
+}
+
+fn open_menu(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut game_state: ResMut<State<global::GameState>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::P) {
+        game_state.set(global::GameState::Menu).unwrap();
     }
 }

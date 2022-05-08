@@ -3,7 +3,8 @@ mod enemy_table;
 mod global;
 mod item_table;
 mod lose;
-mod mainmenu; // why does this work?????
+mod mainmenu;
+mod menu;
 mod overworld;
 mod player_attack_table;
 use bevy::prelude::*;
@@ -25,6 +26,7 @@ fn main() {
     .init_resource::<global::PlayerAttackTable>()
     .init_resource::<global::ItemTable>()
     .init_resource::<global::Player>() // TODO: put in main menu
+    .init_resource::<global::PlayerEquipmentEquipped>() // TODO: put in main menu
     .init_resource::<global::PlayerMagicEquipped>() // TODO: put in main menu
     .init_resource::<global::PlayerLimitEquipped>() // TODO: put in main menu
     .init_resource::<global::PlayerItemInventory>() // TODO: put in main menu
@@ -35,6 +37,7 @@ fn main() {
     .add_plugins(DefaultPlugins)
     .add_plugin(mainmenu::MainMenuPlugin)
     .add_plugin(overworld::OverworldPlugin)
+    .add_plugin(menu::MenuPlugin)
     .add_plugin(battle::BattlePlugin)
     .add_plugin(lose::LosePlugin)
     .run();

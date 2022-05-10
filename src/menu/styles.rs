@@ -1,4 +1,7 @@
-use crate::{global, FontAssets};
+use crate::{
+    global::{self, BACKGROUND_SIZE},
+    FontAssets,
+};
 use bevy::prelude::*;
 
 // Common bundles
@@ -13,16 +16,35 @@ pub fn common_text_style(font_assets: &Res<FontAssets>) -> TextStyle {
 
 pub fn styled_text_bundle<T: Into<String>>(text: T, font_assets: &Res<FontAssets>) -> TextBundle {
     TextBundle {
-        text: Text::with_section(text, common_text_style(&font_assets), Default::default()),
+        text: styled_text(text, &font_assets),
         ..default()
     }
+}
+
+pub fn styled_text<T: Into<String>>(text: T, font_assets: &Res<FontAssets>) -> Text {
+    Text::with_section(text, common_text_style(&font_assets), Default::default())
 }
 
 pub fn styled_button() -> ButtonBundle {
     ButtonBundle {
         style: Style {
-            size: Size::new(Val::Px(100.0), Val::Px(50.0)),
-            margin: Rect::all(Val::Px(1.0)),
+            size: Size::new(Val::Px(100.), Val::Px(50.)),
+            margin: Rect::all(Val::Px(1.)),
+            flex_shrink: 0.,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        color: global::NORMAL_BUTTON.into(),
+        ..default()
+    }
+}
+
+pub fn styled_subpanel_button() -> ButtonBundle {
+    ButtonBundle {
+        style: Style {
+            size: Size::new(Val::Px(500.), Val::Px(50.)),
+            margin: Rect::all(Val::Px(1.)),
             flex_shrink: 0.,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
@@ -38,7 +60,7 @@ pub fn styled_button() -> ButtonBundle {
 pub fn styled_menu_container() -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+            size: Size::new(Val::Px(BACKGROUND_SIZE[0]), Val::Px(BACKGROUND_SIZE[1])),
             margin: Rect::all(Val::Auto),
             flex_direction: FlexDirection::Row,
             ..default()
@@ -50,7 +72,7 @@ pub fn styled_menu_container() -> NodeBundle {
 pub fn styled_side_panel() -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Undefined, Val::Percent(100.)),
+            size: Size::new(Val::Px(100.), Val::Percent(100.)),
             margin: Rect::all(Val::Px(4.)),
             flex_direction: FlexDirection::ColumnReverse,
             ..default()
@@ -62,7 +84,7 @@ pub fn styled_side_panel() -> NodeBundle {
 pub fn styled_main_panel() -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Undefined, Val::Percent(100.)),
+            size: Size::new(Val::Percent(100.), Val::Percent(100.)),
             margin: Rect::all(Val::Px(4.)),
             flex_grow: 1.,
             flex_direction: FlexDirection::ColumnReverse,
@@ -164,6 +186,43 @@ pub fn styled_stat_bar(perc: f32, color: Color) -> NodeBundle {
             ..default()
         },
         color: color.into(),
+        ..default()
+    }
+}
+
+pub fn styled_sub_panel() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+            ..default()
+        },
+        ..default()
+    }
+}
+
+pub fn styled_sub_sub_panel() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            flex_direction: FlexDirection::ColumnReverse,
+            align_self: AlignSelf::Center,
+            size: Size::new(Val::Percent(50.0), Val::Percent(100.)),
+            overflow: Overflow::Hidden,
+            ..default()
+        },
+        color: Color::FUCHSIA.into(),
+        ..default()
+    }
+}
+
+pub fn styled_item_list() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            flex_direction: FlexDirection::ColumnReverse,
+            flex_grow: 1.0,
+            max_size: Size::new(Val::Px(500.), Val::Percent(100.)),
+            ..default()
+        },
+        color: Color::BLUE.into(),
         ..default()
     }
 }

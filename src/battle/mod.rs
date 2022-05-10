@@ -486,7 +486,6 @@ fn action_menu_button_action(
 
 fn magic_menu_button_action(
     mut commands: Commands,
-    children_query: Query<&Children>,
     interaction_query: Query<
         (&Interaction, &global::PlayerAttack),
         (Changed<Interaction>, With<Button>),
@@ -499,11 +498,9 @@ fn magic_menu_button_action(
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         // despawn description
-        if let Ok(children) = children_query.get(desc_container.single()) {
-            for child in children.iter() {
-                commands.entity(*child).despawn_recursive();
-            }
-        }
+        commands
+            .entity(desc_container.single())
+            .despawn_descendants();
         if *interaction == Interaction::Clicked {
             if player.stats.mp >= menu_button_action.mp_use {
                 battle_state.set(BattleState::PlayerAction).unwrap();
@@ -536,7 +533,6 @@ fn magic_menu_button_action(
 
 fn item_button_action(
     mut commands: Commands,
-    children_query: Query<&Children>,
     interaction_query: Query<(&Interaction, &ItemButton), (Changed<Interaction>, With<Button>)>,
     mut desc_container: Query<Entity, With<SubSubActionMenuDescContainer>>,
     mut battle_state: ResMut<State<BattleState>>,
@@ -568,12 +564,9 @@ fn item_button_action(
                     });
                 });
         } else {
-            // TODO: modify despawn_children() in main.rs to accept references?
-            if let Ok(children) = children_query.get(desc_container.single()) {
-                for child in children.iter() {
-                    commands.entity(*child).despawn_recursive();
-                }
-            }
+            commands
+                .entity(desc_container.single())
+                .despawn_descendants();
         }
     }
 }

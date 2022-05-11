@@ -193,7 +193,8 @@ pub fn styled_stat_bar(perc: f32, color: Color) -> NodeBundle {
 pub fn styled_sub_panel() -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+            size: Size::new(Val::Percent(100.), Val::Undefined),
+            flex_grow: 1.,
             ..default()
         },
         ..default()

@@ -283,16 +283,12 @@ fn spawn_item_menu(
             p.spawn_bundle(styled_item_list())
                 .insert(ItemList::default())
                 .with_children(|p| {
-                    for (item_id, quantity) in items.iter() {
+                    for (item_id, _) in items.iter() {
                         p.spawn_bundle(styled_subpanel_button())
                             .insert(ItemButton(*item_id))
                             .with_children(|p| {
                                 p.spawn_bundle(styled_text_bundle(
-                                    format!(
-                                        "{} ({})",
-                                        item_table.get(&item_id).unwrap().name,
-                                        quantity
-                                    ),
+                                    format!("{}", item_table.get(&item_id).unwrap().name),
                                     &font_assets,
                                 ));
                             });
@@ -310,19 +306,22 @@ fn spawn_item_menu(
 
 fn item_button_action(
     mut commands: Commands,
-    mut interaction_query: Query<
-        (&Interaction, &ItemButton, Entity),
-        (Changed<Interaction>, With<Button>),
-    >,
+    children_query: Query<&Children>,
+    mut interaction_query: Query<(&Interaction, &ItemButton), (Changed<Interaction>, With<Button>)>,
     mut desc_entity: Query<Entity, With<SubPanelDesc>>,
-    mut desc: Query<&mut Text>,
     mut items: ResMut<global::PlayerItemInventory>,
     mut player: ResMut<global::Player>,
     item_table: Res<global::ItemTable>,
     font_assets: Res<FontAssets>,
 ) {
-    for (interaction, button_action, button_entity) in interaction_query.iter_mut() {
+    for (interaction, button_action) in interaction_query.iter_mut() {
         let item = item_table.get(&button_action.0).unwrap().clone();
+
+        if let Ok(children) = children_query.get(desc_entity.single()) {
+            for child in children.iter() {
+                commands.entity(*child).despawn_recursive();
+            }
+        }
         if *interaction == Interaction::Clicked {
             if let Some(_) = items.get_mut(&item.id) {
                 if item.stats.hp > 0 {
@@ -336,27 +335,34 @@ fn item_button_action(
 
                 *items.get_mut(&item.id).unwrap() -= 1;
 
-                // Update button text.
-                commands.entity(button_entity).despawn_descendants();
-                commands.entity(button_entity).with_children(|p| {
-                    p.spawn_bundle(styled_text_bundle(
-                        format!("{} ({})", item.name, *items.get_mut(&item.id).unwrap()),
-                        &font_assets,
-                    ));
-                });
-
                 // Remove item if reach 0.
                 if *items.get_mut(&item.id).unwrap() == 0 {
                     items.remove(&item.id);
                 }
             }
         } else if *interaction == Interaction::Hovered {
-            let desc_text = if item.stats.hp > 0 {
-                format!("Heals {} HP", item.stats.hp)
-            } else {
-                format!("Heals {} MP", item.stats.mp)
-            };
-            *desc.get_mut(desc_entity.single_mut()).unwrap() = styled_text(desc_text, &font_assets);
+            commands
+                .entity(desc_entity.single_mut())
+                .with_children(|p| {
+                    let mut desc_text = if item.stats.hp > 0 {
+                        format!("Heals {} HP", item.stats.hp)
+                    } else {
+                        format!("Heals {} MP", item.stats.mp)
+                    };
+                    let quantity = if let Some(q) = items.get_mut(&item.id) {
+                        *q
+                    } else {
+                        0
+                    };
+                    desc_text.push_str(&format!("\nQuantity: {}", quantity));
+                    p.spawn_bundle(styled_text_bundle(desc_text, &font_assets));
+                });
+        } else {
+            if let Ok(children) = children_query.get(desc_entity.single()) {
+                for child in children.iter() {
+                    commands.entity(*child).despawn_recursive();
+                }
+            }
         }
     }
 }

@@ -49,6 +49,9 @@ fn overworld_setup(
     areas: Res<global::Areas>,
     mut player: ResMut<global::Player>,
 ) {
+    // Ensure open_menu() doesn't conflict with close_menu() from menu/mod.rs.
+    commands.insert_resource(Timer::from_seconds(global::MENU_TOGGLE_DURATION, false));
+
     // Overworld
     commands
         .spawn_bundle(SpriteBundle {
@@ -282,10 +285,12 @@ fn spawn_monster(
 }
 
 fn open_menu(
+    time: Res<Time>,
+    mut timer: ResMut<Timer>,
     keyboard_input: Res<Input<KeyCode>>,
     mut game_state: ResMut<State<global::GameState>>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::P) {
+    if timer.tick(time.delta()).finished() && keyboard_input.just_pressed(KeyCode::P) {
         game_state.set(global::GameState::Menu).unwrap();
     }
 }

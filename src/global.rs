@@ -16,6 +16,8 @@ pub(crate) const HOVERED_BUTTON: Color = Color::rgb(0.8, 0.8, 0.8);
 pub(crate) const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 pub(crate) const PRESSED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 
+pub(crate) const MENU_TOGGLE_DURATION: f32 = 0.2;
+
 pub(crate) const XP_TABLE: [i32; 5] = [1000, 8000, 27000, 64000, 1];
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]

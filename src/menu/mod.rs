@@ -17,14 +17,21 @@ impl Plugin for MenuPlugin {
             .add_system_set(SystemSet::on_enter(global::GameState::Menu).with_system(menu_setup))
             .add_system_set(
                 SystemSet::on_update(global::GameState::Menu)
+                    .with_system(close_menu)
                     .with_system(side_panel_action)
-                    .with_system(item_button_action)
-                    .with_system(item_list_scroll)
+                    .with_system(scroll_list_scroll)
                     .with_system(button_system),
             )
             .add_system_set(SystemSet::on_enter(SubPanelState::Item).with_system(spawn_item_menu))
             .add_system_set(
+                SystemSet::on_update(SubPanelState::Item).with_system(item_button_action),
+            )
+            .add_system_set(
                 SystemSet::on_exit(SubPanelState::Item).with_system(despawn_children::<SubPanel>),
+            )
+            .add_system_set(SystemSet::on_enter(SubPanelState::Magic).with_system(spawn_magic_menu))
+            .add_system_set(
+                SystemSet::on_exit(SubPanelState::Magic).with_system(despawn_children::<SubPanel>),
             )
             .add_system_set(
                 SystemSet::on_exit(global::GameState::Menu)
@@ -87,7 +94,7 @@ struct DefenseText;
 struct SubPanel;
 
 #[derive(Component, Default)]
-struct ItemList {
+struct ScrollList {
     position: f32,
 }
 
@@ -100,6 +107,12 @@ struct SubPanelDescContainer;
 #[derive(Component)]
 struct SubPanelDesc;
 
+#[derive(Component)]
+struct MagicListContainer;
+
+#[derive(Component, Deref)]
+struct MagicButton(global::PlayerAttack);
+
 fn menu_setup(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
@@ -107,6 +120,9 @@ fn menu_setup(
     mut subpanel_state: ResMut<State<SubPanelState>>,
     player: Res<global::Player>,
 ) {
+    // Ensures close_menu() doesn't conflict with open_menu() from overworld.rs.
+    commands.insert_resource(Timer::from_seconds(global::MENU_TOGGLE_DURATION, false));
+
     // Reset state for recurring visit to this page.
     if *menu_state.current() == MenuState::Inactive {
         menu_state.set(MenuState::Active).unwrap();
@@ -118,7 +134,7 @@ fn menu_setup(
     let hp_perc = player.stats.hp as f32 / player.stats.hp_max as f32 * 100.;
     let mp_perc = player.stats.mp as f32 / player.stats.mp_max as f32 * 100.;
     let max_xp = global::XP_TABLE[player.stats.level as usize - 1];
-    let xp_perc = player.stats.experience as f32 / max_xp as f32;
+    let xp_perc = player.stats.experience as f32 / max_xp as f32 * 100.;
 
     commands
         .spawn_bundle(styled_menu_container())
@@ -253,9 +269,17 @@ fn side_panel_action(
                 SidePanelButtonAction::Item => {
                     // Switch subpanel state.
                     match *subpanel_state.current() {
-                        SubPanelState::Inactive => subpanel_state.set(SubPanelState::Item).unwrap(),
                         SubPanelState::Item => subpanel_state.set(SubPanelState::Inactive).unwrap(),
-                        _ => (),
+                        _ => subpanel_state.set(SubPanelState::Item).unwrap(),
+                    }
+                }
+                SidePanelButtonAction::Magic => {
+                    // Switch subpanel state.
+                    match *subpanel_state.current() {
+                        SubPanelState::Magic => {
+                            subpanel_state.set(SubPanelState::Inactive).unwrap()
+                        }
+                        _ => subpanel_state.set(SubPanelState::Magic).unwrap(),
                     }
                 }
                 SidePanelButtonAction::Exit => {
@@ -275,13 +299,13 @@ fn spawn_item_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     subpanel: Query<Entity, With<SubPanel>>,
-    items: ResMut<global::PlayerItemInventory>,
+    items: Res<global::PlayerItemInventory>,
     item_table: Res<global::ItemTable>,
 ) {
     commands.entity(subpanel.single()).with_children(|p| {
         p.spawn_bundle(styled_sub_sub_panel()).with_children(|p| {
-            p.spawn_bundle(styled_item_list())
-                .insert(ItemList::default())
+            p.spawn_bundle(styled_scroll_list())
+                .insert(ScrollList::default())
                 .with_children(|p| {
                     for (item_id, _) in items.iter() {
                         p.spawn_bundle(styled_subpanel_button())
@@ -336,7 +360,7 @@ fn item_button_action(
                 *items.get_mut(&item.id).unwrap() -= 1;
 
                 // Remove item if reach 0.
-                if *items.get_mut(&item.id).unwrap() == 0 {
+                if *items.get(&item.id).unwrap() == 0 {
                     items.remove(&item.id);
                 }
             }
@@ -367,9 +391,9 @@ fn item_button_action(
     }
 }
 
-fn item_list_scroll(
+fn scroll_list_scroll(
     mut mouse_wheel_events: EventReader<MouseWheel>,
-    mut query_list: Query<(&mut ItemList, &mut Style, &Children, &Node)>,
+    mut query_list: Query<(&mut ScrollList, &mut Style, &Children, &Node)>,
     query_item: Query<&Node>,
 ) {
     for mouse_wheel_event in mouse_wheel_events.iter() {
@@ -387,6 +411,100 @@ fn item_list_scroll(
             scrolling_list.position += dy;
             scrolling_list.position = scrolling_list.position.clamp(-max_scroll, 0.);
             style.position.top = Val::Px(scrolling_list.position);
+        }
+    }
+}
+
+// FIXME: why is the magic menu laggy?
+fn spawn_magic_menu(
+    mut commands: Commands,
+    font_assets: Res<FontAssets>,
+    subpanel: Query<Entity, With<SubPanel>>,
+    attack_inv: ResMut<global::PlayerAttackInventory>,
+    magic_equipped: ResMut<global::PlayerMagicEquipped>,
+) {
+    commands.entity(subpanel.single()).with_children(|p| {
+        p.spawn_bundle(styled_sub_sub_panel()).with_children(|p| {
+            p.spawn_bundle(styled_magic_slots_container())
+                .with_children(|p| {
+                    for (i, magic) in magic_equipped.iter().enumerate() {
+                        p.spawn_bundle(styled_magic_equipped_container())
+                            .with_children(|p| {
+                                // equipped: MAGIC_NAME <button to change>
+                                let magic_name = if let Some(magic) = magic {
+                                    magic.name.clone()
+                                } else {
+                                    "None".to_string()
+                                };
+                                let slot_text = format!("Slot {}: {}", i, magic_name);
+                                p.spawn_bundle(styled_magic_equipped_text_container())
+                                    .with_children(|p| {
+                                        p.spawn_bundle(styled_text_bundle(slot_text, &font_assets));
+                                    });
+                                p.spawn_bundle(styled_button()).with_children(|p| {
+                                    p.spawn_bundle(styled_text_bundle("Change", &font_assets));
+                                });
+                            });
+                    }
+                });
+
+            p.spawn_bundle(styled_magic_panel_desc_container())
+                .insert(SubPanelDescContainer)
+                .with_children(|p| {
+                    p.spawn_bundle(styled_text_bundle("", &font_assets))
+                        .insert(SubPanelDesc);
+                });
+        });
+
+        p.spawn_bundle(styled_sub_sub_panel())
+            .insert(MagicListContainer)
+            .with_children(|p| {
+                // TODO: spawn only when 'Change' button is pressed.
+                p.spawn_bundle(styled_scroll_list())
+                    .insert(ScrollList::default())
+                    .with_children(|p| {
+                        for attack in attack_inv.iter() {
+                            if let Some(atk_type) = &attack.attack_type {
+                                if *atk_type == global::PlayerAttackType::Magic {
+                                    p.spawn_bundle(styled_subpanel_button())
+                                        .insert(MagicButton(attack.clone()))
+                                        .with_children(|p| {
+                                            p.spawn_bundle(styled_text_bundle(
+                                                format!("{}", attack.name),
+                                                &font_assets,
+                                            ));
+                                        });
+                                }
+                            }
+                        }
+                    });
+            });
+    });
+}
+
+fn magic_slot_button_action() {
+    // TODO
+}
+
+fn magic_button_action() {
+    // TODO
+}
+
+fn close_menu(
+    time: Res<Time>,
+    mut timer: ResMut<Timer>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut game_state: ResMut<State<global::GameState>>,
+    mut menu_state: ResMut<State<MenuState>>,
+    mut subpanel_state: ResMut<State<SubPanelState>>,
+) {
+    if timer.tick(time.delta()).finished() && keyboard_input.just_pressed(KeyCode::P) {
+        game_state.set(global::GameState::Overworld).unwrap();
+        if *menu_state.current() == MenuState::Active {
+            menu_state.set(MenuState::Inactive).unwrap();
+        }
+        if *subpanel_state.current() != SubPanelState::Inactive {
+            subpanel_state.set(SubPanelState::Inactive).unwrap();
         }
     }
 }

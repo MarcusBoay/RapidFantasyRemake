@@ -193,8 +193,9 @@ pub fn styled_stat_bar(perc: f32, color: Color) -> NodeBundle {
 pub fn styled_sub_panel() -> NodeBundle {
     NodeBundle {
         style: Style {
-            size: Size::new(Val::Percent(100.), Val::Undefined),
-            flex_grow: 1.,
+            size: Size::new(Val::Percent(100.), Val::Px(BACKGROUND_SIZE[1] - 120.)),
+            align_content: AlignContent::FlexStart,
+            justify_content: JustifyContent::FlexStart,
             ..default()
         },
         ..default()
@@ -205,17 +206,17 @@ pub fn styled_sub_sub_panel() -> NodeBundle {
     NodeBundle {
         style: Style {
             flex_direction: FlexDirection::ColumnReverse,
-            align_self: AlignSelf::Center,
+            align_items: AlignItems::FlexStart,
             size: Size::new(Val::Percent(50.0), Val::Percent(100.)),
             overflow: Overflow::Hidden,
             ..default()
         },
-        color: Color::FUCHSIA.into(),
+        // color: Color::FUCHSIA.into(),
         ..default()
     }
 }
 
-pub fn styled_item_list() -> NodeBundle {
+pub fn styled_scroll_list() -> NodeBundle {
     NodeBundle {
         style: Style {
             flex_direction: FlexDirection::ColumnReverse,
@@ -223,7 +224,52 @@ pub fn styled_item_list() -> NodeBundle {
             max_size: Size::new(Val::Px(500.), Val::Percent(100.)),
             ..default()
         },
-        color: Color::BLUE.into(),
+        // color: Color::BLUE.into(),
+        ..default()
+    }
+}
+
+pub fn styled_magic_slots_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.), Val::Px(240.)),
+            align_content: AlignContent::FlexStart,
+            justify_content: JustifyContent::SpaceBetween,
+            flex_direction: FlexDirection::ColumnReverse,
+            flex_shrink: 0.,
+            ..default()
+        },
+        ..default()
+    }
+}
+
+pub fn styled_magic_equipped_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.), Val::Px(50.)),
+            ..default()
+        },
+        ..default()
+    }
+}
+
+pub fn styled_magic_equipped_text_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Px(400.), Val::Percent(100.)),
+            ..default()
+        },
+        ..default()
+    }
+}
+
+pub fn styled_magic_panel_desc_container() -> NodeBundle {
+    NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.), Val::Px(240.)),
+            ..default()
+        },
+        // color: Color::PURPLE.into(),
         ..default()
     }
 }

@@ -559,9 +559,9 @@ mod magic_menu {
         });
     }
 
-    // TODO: despawn old menu?
     pub(super) fn magic_slot_button_action(
         mut commands: Commands,
+        children_query: Query<&Children>,
         mut interaction_query: Query<
             (&Interaction, &MagicSlotButton),
             (Changed<Interaction>, With<Button>),
@@ -573,6 +573,13 @@ mod magic_menu {
     ) {
         for (interaction, button_action) in interaction_query.iter_mut() {
             if *interaction == Interaction::Clicked {
+                // Despawn magic list.
+                if let Ok(children) = children_query.get(magic_list_container.single()) {
+                    for child in children.iter() {
+                        commands.entity(*child).despawn_recursive();
+                    }
+                }
+
                 magic_slot_selected.0 = button_action.0;
                 commands
                     .entity(magic_list_container.single())
@@ -670,6 +677,7 @@ mod magic_menu {
 mod equip_menu {
     use super::*;
 
+    // FIXME: why is the equip menu laggy?
     pub(super) fn spawn_equip_menu(
         mut commands: Commands,
         font_assets: Res<FontAssets>,
@@ -727,10 +735,9 @@ mod equip_menu {
         });
     }
 
-    // TODO:
-    // - despawn menu
     pub(super) fn equip_slot_button_action(
         mut commands: Commands,
+        children_query: Query<&Children>,
         mut interaction_query: Query<
             (&Interaction, &EquipSlotButton),
             (Changed<Interaction>, With<Button>),
@@ -743,6 +750,13 @@ mod equip_menu {
     ) {
         for (interaction, button_action) in interaction_query.iter_mut() {
             if *interaction == Interaction::Clicked {
+                // Despawn equipment list.
+                if let Ok(children) = children_query.get(equip_list_container.single()) {
+                    for child in children.iter() {
+                        commands.entity(*child).despawn_recursive();
+                    }
+                }
+
                 equip_slot_selected.0 = button_action.0.clone();
                 commands
                     .entity(equip_list_container.single())

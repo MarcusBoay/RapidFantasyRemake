@@ -410,15 +410,22 @@ mod item_menu {
                 p.spawn_bundle(styled_scroll_list())
                     .insert(ScrollList::default())
                     .with_children(|p| {
-                        for (item_id, _) in items.iter() {
-                            p.spawn_bundle(styled_subpanel_button())
-                                .insert(ItemButton(*item_id))
-                                .with_children(|p| {
-                                    p.spawn_bundle(styled_text_bundle(
-                                        item_table.get(item_id).unwrap().name.to_string(),
-                                        &font_assets,
-                                    ));
-                                });
+                        let mut items_vec = items
+                            .iter()
+                            .map(|(id, _)| item_table.get(id).unwrap().clone())
+                            .collect::<Vec<global::Item>>();
+                        items_vec.sort_by(|a, b| a.id.cmp(&b.id));
+                        for item in items_vec {
+                            if item.item_type == global::ItemType::Consumable {
+                                p.spawn_bundle(styled_subpanel_button())
+                                    .insert(ItemButton(item.id))
+                                    .with_children(|p| {
+                                        p.spawn_bundle(styled_text_bundle(
+                                            item.name.to_string(),
+                                            &font_assets,
+                                        ));
+                                    });
+                            }
                         }
                     });
             });
@@ -438,6 +445,12 @@ mod item_menu {
             (&Interaction, &ItemButton),
             (Changed<Interaction>, With<Button>),
         >,
+        mut stats_query: ParamSet<(
+            Query<&mut Text, With<HPText>>,
+            Query<&mut Style, With<HPBar>>,
+            Query<&mut Text, With<MPText>>,
+            Query<&mut Style, With<MPBar>>,
+        )>,
         mut desc_entity: Query<Entity, With<SubPanelDesc>>,
         mut items: ResMut<global::PlayerItemInventory>,
         mut player: ResMut<global::Player>,
@@ -468,6 +481,26 @@ mod item_menu {
                     // Remove item if reach 0.
                     if *items.get(&item.id).unwrap() == 0 {
                         items.remove(&item.id);
+                    }
+
+                    // Update stats panel.
+                    for mut hp_text in stats_query.p0().iter_mut() {
+                        hp_text.sections[1].value =
+                            format!("{} / {}", player.stats.hp, player.stats.hp_max);
+                    }
+                    for mut hp_bar in stats_query.p1().iter_mut() {
+                        let player_hp_perc =
+                            player.stats.hp as f32 / player.stats.hp_max as f32 * 100.;
+                        hp_bar.size.width = Val::Percent(player_hp_perc);
+                    }
+                    for mut mp_text in stats_query.p2().iter_mut() {
+                        mp_text.sections[1].value =
+                            format!("{} / {}", player.stats.mp, player.stats.mp_max);
+                    }
+                    for mut mp_bar in stats_query.p3().iter_mut() {
+                        let player_mp_perc =
+                            player.stats.mp as f32 / player.stats.mp_max as f32 * 100.;
+                        mp_bar.size.width = Val::Percent(player_mp_perc);
                     }
                 }
             } else if *interaction == Interaction::Hovered {
@@ -583,7 +616,12 @@ mod magic_menu {
                         p.spawn_bundle(styled_scroll_list())
                             .insert(ScrollList::default())
                             .with_children(|p| {
-                                for attack in attack_inv.iter() {
+                                let mut atk_vec = attack_inv
+                                    .iter()
+                                    .cloned()
+                                    .collect::<Vec<global::PlayerAttack>>();
+                                atk_vec.sort_by(|a, b| a.id.cmp(&b.id));
+                                for attack in atk_vec.iter() {
                                     if let Some(atk_type) = &attack.attack_type {
                                         if *atk_type == global::PlayerAttackType::Magic {
                                             p.spawn_bundle(styled_subpanel_button())
@@ -673,6 +711,7 @@ mod magic_menu {
 mod equip_menu {
     use super::*;
 
+    // TODO: sort items to display
     // FIXME: why is the equip menu laggy?
     pub(super) fn spawn_equip_menu(
         mut commands: Commands,
@@ -760,15 +799,19 @@ mod equip_menu {
                         p.spawn_bundle(styled_scroll_list())
                             .insert(ScrollList::default())
                             .with_children(|p| {
-                                for (item_id, _) in item_inv.iter() {
-                                    if button_action.0 == item_table.get(item_id).unwrap().item_type
-                                    {
+                                let mut items_vec = item_inv
+                                    .iter()
+                                    .map(|(id, _)| item_table.get(id).unwrap().clone())
+                                    .collect::<Vec<global::Item>>();
+                                items_vec.sort_by(|a, b| a.id.cmp(&b.id));
+                                for item in items_vec {
+                                    if button_action.0 == item.item_type {
                                         p.spawn_bundle(styled_subpanel_button())
-                                            .insert(EquipButton(*item_id))
+                                            .insert(EquipButton(item.id))
                                             .with_children(|p| {
                                                 p.spawn_bundle(styled_text_bundle(
                                                     item_table
-                                                        .get(item_id)
+                                                        .get(&item.id)
                                                         .unwrap()
                                                         .name
                                                         .to_string(),
@@ -783,8 +826,6 @@ mod equip_menu {
         }
     }
 
-    // TODO:
-    // - update stats panel
     pub(super) fn equip_button_action(
         mut commands: Commands,
         children_query: Query<&Children>,
@@ -917,3 +958,5 @@ mod equip_menu {
         }
     }
 }
+
+// TODO: limit menu

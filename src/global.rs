@@ -114,13 +114,13 @@ impl Stats {
     }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub(crate) enum PlayerAttackType {
     Limit,
     Magic,
 }
 
-#[derive(Default, Clone, Component, Hash, PartialEq, Eq)]
+#[derive(Default, Clone, Component, Hash, PartialEq, Eq, Debug)]
 pub(crate) struct PlayerAttack {
     pub(crate) id: usize,
     pub(crate) name: String,
@@ -224,9 +224,9 @@ impl FromWorld for PlayerItemInventory {
         items.insert(5, 5);
 
         // TODO: remove. this is for testing only.
+        items.insert(10, 1);
         items.insert(11, 1);
         items.insert(12, 1);
-        items.insert(13, 1);
         items.insert(19, 1);
         items.insert(20, 1);
         items.insert(21, 1);
@@ -329,7 +329,7 @@ pub(crate) enum ItemType {
     Accessory,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct ItemStats {
     pub(crate) hp_max: i32,
     pub(crate) mp_max: i32,
@@ -379,7 +379,7 @@ impl ItemStats {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Item {
     pub(crate) id: usize,
     pub(crate) name: String,

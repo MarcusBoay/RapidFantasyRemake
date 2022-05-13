@@ -450,9 +450,9 @@ fn spawn_magic_menu(
                                 };
                                 let slot_text = format!("Slot {}: {}", i, magic_name);
                                 p.spawn_bundle(styled_magic_equipped_text_container())
-                                    .insert(MagicSlotText(i))
                                     .with_children(|p| {
-                                        p.spawn_bundle(styled_text_bundle(slot_text, &font_assets));
+                                        p.spawn_bundle(styled_text_bundle(slot_text, &font_assets))
+                                            .insert(MagicSlotText(i));
                                     });
                                 p.spawn_bundle(styled_button())
                                     .insert(MagicSlotButton(i))
@@ -525,8 +525,8 @@ fn magic_button_action(
     >,
     mut desc_entity: Query<Entity, With<SubPanelDesc>>,
     magic_list_container: Query<Entity, With<MagicListContainer>>,
-    mut magic_slot_text_entity: Query<Entity, With<MagicSlotText>>,
-    mut magic_slot_text: Query<&mut Text>,
+    mut magic_slot_query: Query<(Entity, &MagicSlotText)>,
+    mut magic_slot_text_query: Query<&mut Text>,
     font_assets: Res<FontAssets>,
     magic_slot_selected: Res<MagicSlotSelected>,
     mut magic_equipped: ResMut<global::PlayerMagicEquipped>,
@@ -552,10 +552,13 @@ fn magic_button_action(
 
             // Update slot magic text.
             let slot_text = format!("Slot {}: {}", magic_slot_selected.0, button_action.name);
-            // FIXME.
-            // *magic_slot_text
-            //     .get_mut(magic_slot_text_entity.single_mut())
-            //     .unwrap() = styled_text(slot_text, &font_assets);
+            for (magic_slot_entity, magic_slot_text) in magic_slot_query.iter_mut() {
+                if magic_slot_text.0 == magic_slot_selected.0 {
+                    *magic_slot_text_query.get_mut(magic_slot_entity).unwrap() =
+                        styled_text(slot_text.clone(), &font_assets);
+                    break;
+                }
+            }
         } else if *interaction == Interaction::Hovered {
             // Show magic description.
             commands

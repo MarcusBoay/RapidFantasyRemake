@@ -233,15 +233,15 @@ impl PlayerItemInventory {
         items.insert(5, 5);
 
         // TODO: remove. this is for testing only.
-        items.insert(10, 1);
-        items.insert(11, 1);
-        items.insert(12, 1);
-        items.insert(19, 1);
-        items.insert(20, 1);
-        items.insert(21, 1);
-        items.insert(28, 1);
-        items.insert(29, 1);
-        items.insert(30, 1);
+        // items.insert(10, 1);
+        // items.insert(11, 1);
+        // items.insert(12, 1);
+        // items.insert(19, 1);
+        // items.insert(20, 1);
+        // items.insert(21, 1);
+        // items.insert(28, 1);
+        // items.insert(29, 1);
+        // items.insert(30, 1);
 
         PlayerItemInventory(items)
     }

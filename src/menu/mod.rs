@@ -31,6 +31,11 @@ impl Plugin for MenuPlugin {
             )
             .add_system_set(SystemSet::on_enter(SubPanelState::Magic).with_system(spawn_magic_menu))
             .add_system_set(
+                SystemSet::on_update(SubPanelState::Magic)
+                    .with_system(magic_slot_button_action)
+                    .with_system(magic_button_action),
+            )
+            .add_system_set(
                 SystemSet::on_exit(SubPanelState::Magic).with_system(despawn_children::<SubPanel>),
             )
             .add_system_set(
@@ -111,6 +116,15 @@ struct SubPanelDesc;
 struct MagicListContainer;
 
 #[derive(Component, Deref)]
+struct MagicSlotButton(usize);
+
+#[derive(Component, Deref)]
+struct MagicSlotText(usize);
+
+#[derive(Default, Deref)]
+struct MagicSlotSelected(usize);
+
+#[derive(Component, Deref)]
 struct MagicButton(global::PlayerAttack);
 
 fn menu_setup(
@@ -122,6 +136,8 @@ fn menu_setup(
 ) {
     // Ensures close_menu() doesn't conflict with open_menu() from overworld.rs.
     commands.insert_resource(Timer::from_seconds(global::MENU_TOGGLE_DURATION, false));
+
+    commands.insert_resource(MagicSlotSelected(0));
 
     // Reset state for recurring visit to this page.
     if *menu_state.current() == MenuState::Inactive {
@@ -312,7 +328,7 @@ fn spawn_item_menu(
                             .insert(ItemButton(*item_id))
                             .with_children(|p| {
                                 p.spawn_bundle(styled_text_bundle(
-                                    format!("{}", item_table.get(&item_id).unwrap().name),
+                                    item_table.get(item_id).unwrap().name.to_string(),
                                     &font_assets,
                                 ));
                             });
@@ -347,7 +363,7 @@ fn item_button_action(
             }
         }
         if *interaction == Interaction::Clicked {
-            if let Some(_) = items.get_mut(&item.id) {
+            if items.get_mut(&item.id).is_some() {
                 if item.stats.hp > 0 {
                     player.stats.hp =
                         std::cmp::min(player.stats.hp + item.stats.hp, player.stats.hp_max);
@@ -381,11 +397,9 @@ fn item_button_action(
                     desc_text.push_str(&format!("\nQuantity: {}", quantity));
                     p.spawn_bundle(styled_text_bundle(desc_text, &font_assets));
                 });
-        } else {
-            if let Ok(children) = children_query.get(desc_entity.single()) {
-                for child in children.iter() {
-                    commands.entity(*child).despawn_recursive();
-                }
+        } else if let Ok(children) = children_query.get(desc_entity.single()) {
+            for child in children.iter() {
+                commands.entity(*child).despawn_recursive();
             }
         }
     }
@@ -420,8 +434,7 @@ fn spawn_magic_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     subpanel: Query<Entity, With<SubPanel>>,
-    attack_inv: ResMut<global::PlayerAttackInventory>,
-    magic_equipped: ResMut<global::PlayerMagicEquipped>,
+    magic_equipped: Res<global::PlayerMagicEquipped>,
 ) {
     commands.entity(subpanel.single()).with_children(|p| {
         p.spawn_bundle(styled_sub_sub_panel()).with_children(|p| {
@@ -430,7 +443,6 @@ fn spawn_magic_menu(
                     for (i, magic) in magic_equipped.iter().enumerate() {
                         p.spawn_bundle(styled_magic_equipped_container())
                             .with_children(|p| {
-                                // equipped: MAGIC_NAME <button to change>
                                 let magic_name = if let Some(magic) = magic {
                                     magic.name.clone()
                                 } else {
@@ -438,12 +450,15 @@ fn spawn_magic_menu(
                                 };
                                 let slot_text = format!("Slot {}: {}", i, magic_name);
                                 p.spawn_bundle(styled_magic_equipped_text_container())
+                                    .insert(MagicSlotText(i))
                                     .with_children(|p| {
                                         p.spawn_bundle(styled_text_bundle(slot_text, &font_assets));
                                     });
-                                p.spawn_bundle(styled_button()).with_children(|p| {
-                                    p.spawn_bundle(styled_text_bundle("Change", &font_assets));
-                                });
+                                p.spawn_bundle(styled_button())
+                                    .insert(MagicSlotButton(i))
+                                    .with_children(|p| {
+                                        p.spawn_bundle(styled_text_bundle("Change", &font_assets));
+                                    });
                             });
                     }
                 });
@@ -457,37 +472,108 @@ fn spawn_magic_menu(
         });
 
         p.spawn_bundle(styled_sub_sub_panel())
-            .insert(MagicListContainer)
-            .with_children(|p| {
-                // TODO: spawn only when 'Change' button is pressed.
-                p.spawn_bundle(styled_scroll_list())
-                    .insert(ScrollList::default())
-                    .with_children(|p| {
-                        for attack in attack_inv.iter() {
-                            if let Some(atk_type) = &attack.attack_type {
-                                if *atk_type == global::PlayerAttackType::Magic {
-                                    p.spawn_bundle(styled_subpanel_button())
-                                        .insert(MagicButton(attack.clone()))
-                                        .with_children(|p| {
-                                            p.spawn_bundle(styled_text_bundle(
-                                                format!("{}", attack.name),
-                                                &font_assets,
-                                            ));
-                                        });
-                                }
-                            }
-                        }
-                    });
-            });
+            .insert(MagicListContainer);
     });
 }
 
-fn magic_slot_button_action() {
-    // TODO
+fn magic_slot_button_action(
+    mut commands: Commands,
+    mut interaction_query: Query<
+        (&Interaction, &MagicSlotButton),
+        (Changed<Interaction>, With<Button>),
+    >,
+    magic_list_container: Query<Entity, With<MagicListContainer>>,
+    attack_inv: Res<global::PlayerAttackInventory>,
+    font_assets: Res<FontAssets>,
+    mut magic_slot_selected: ResMut<MagicSlotSelected>,
+) {
+    for (interaction, button_action) in interaction_query.iter_mut() {
+        if *interaction == Interaction::Clicked {
+            magic_slot_selected.0 = button_action.0;
+            commands
+                .entity(magic_list_container.single())
+                .with_children(|p| {
+                    p.spawn_bundle(styled_scroll_list())
+                        .insert(ScrollList::default())
+                        .with_children(|p| {
+                            for attack in attack_inv.iter() {
+                                if let Some(atk_type) = &attack.attack_type {
+                                    if *atk_type == global::PlayerAttackType::Magic {
+                                        p.spawn_bundle(styled_subpanel_button())
+                                            .insert(MagicButton(attack.clone()))
+                                            .with_children(|p| {
+                                                p.spawn_bundle(styled_text_bundle(
+                                                    attack.name.to_string(),
+                                                    &font_assets,
+                                                ));
+                                            });
+                                    }
+                                }
+                            }
+                        });
+                });
+        }
+    }
 }
 
-fn magic_button_action() {
-    // TODO
+fn magic_button_action(
+    mut commands: Commands,
+    children_query: Query<&Children>,
+    mut interaction_query: Query<
+        (&Interaction, &MagicButton),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut desc_entity: Query<Entity, With<SubPanelDesc>>,
+    magic_list_container: Query<Entity, With<MagicListContainer>>,
+    mut magic_slot_text_entity: Query<Entity, With<MagicSlotText>>,
+    mut magic_slot_text: Query<&mut Text>,
+    font_assets: Res<FontAssets>,
+    magic_slot_selected: Res<MagicSlotSelected>,
+    mut magic_equipped: ResMut<global::PlayerMagicEquipped>,
+) {
+    for (interaction, button_action) in interaction_query.iter_mut() {
+        // Despawn description menu.
+        if let Ok(children) = children_query.get(desc_entity.single()) {
+            for child in children.iter() {
+                commands.entity(*child).despawn_recursive();
+            }
+        }
+
+        if *interaction == Interaction::Clicked {
+            // Set selected magic to slot.
+            magic_equipped[magic_slot_selected.0] = Some(button_action.0.clone());
+
+            // Despawn magic list.
+            if let Ok(children) = children_query.get(magic_list_container.single()) {
+                for child in children.iter() {
+                    commands.entity(*child).despawn_recursive();
+                }
+            }
+
+            // Update slot magic text.
+            let slot_text = format!("Slot {}: {}", magic_slot_selected.0, button_action.name);
+            // FIXME.
+            // *magic_slot_text
+            //     .get_mut(magic_slot_text_entity.single_mut())
+            //     .unwrap() = styled_text(slot_text, &font_assets);
+        } else if *interaction == Interaction::Hovered {
+            // Show magic description.
+            commands
+                .entity(desc_entity.single_mut())
+                .with_children(|p| {
+                    let element = if let Some(e) = &button_action.element {
+                        format!("{:?}", e)
+                    } else {
+                        "Normal".to_string()
+                    };
+                    let desc_text = format!(
+                        "Deals Tier {} {} damage.\nCosts {} MP",
+                        button_action.tier, element, button_action.mp_use
+                    );
+                    p.spawn_bundle(styled_text_bundle(desc_text, &font_assets));
+                });
+        }
+    }
 }
 
 fn close_menu(

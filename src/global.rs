@@ -132,7 +132,7 @@ pub(crate) struct PlayerAttackTable {
     pub(crate) table: HashMap<u32, PlayerAttack>,
 }
 
-#[derive(Deref)]
+#[derive(Deref, DerefMut)]
 pub(crate) struct PlayerMagicEquipped(pub(crate) [Option<PlayerAttack>; 4]);
 
 impl FromWorld for PlayerMagicEquipped {
@@ -148,7 +148,7 @@ impl FromWorld for PlayerMagicEquipped {
     }
 }
 
-#[derive(Deref)]
+#[derive(Deref, DerefMut)]
 pub(crate) struct PlayerLimitEquipped(pub(crate) PlayerAttack);
 
 impl FromWorld for PlayerLimitEquipped {

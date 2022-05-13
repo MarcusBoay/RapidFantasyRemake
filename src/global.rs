@@ -92,6 +92,28 @@ pub(crate) struct Stats {
     pub(crate) battle_sprite: Handle<Image>,
 }
 
+impl Stats {
+    pub(crate) fn add_item_stats(&mut self, item_stats: &ItemStats) {
+        self.hp_max += item_stats.hp_max;
+        self.mp_max += item_stats.mp_max;
+        self.hp = std::cmp::min(self.hp + item_stats.hp, self.hp_max);
+        self.mp = std::cmp::min(self.mp + item_stats.mp, self.mp_max);
+        self.strength += item_stats.strength;
+        self.wisdom += item_stats.wisdom;
+        self.defense += item_stats.defense;
+    }
+
+    pub(crate) fn subtract_item_stats(&mut self, item_stats: &ItemStats) {
+        self.hp_max -= item_stats.hp_max;
+        self.mp_max -= item_stats.mp_max;
+        self.hp = std::cmp::max(self.hp - item_stats.hp, 0);
+        self.mp = std::cmp::max(self.mp - item_stats.mp, 0);
+        self.strength -= item_stats.strength;
+        self.wisdom -= item_stats.wisdom;
+        self.defense -= item_stats.defense;
+    }
+}
+
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub(crate) enum PlayerAttackType {
     Limit,
@@ -161,9 +183,9 @@ impl FromWorld for PlayerLimitEquipped {
 
 #[derive(Default)]
 pub(crate) struct PlayerEquipmentEquipped {
-    weapon: Option<Item>,
-    armor: Option<Item>,
-    accessory: Option<Item>,
+    pub(crate) weapon: Option<Item>,
+    pub(crate) armor: Option<Item>,
+    pub(crate) accessory: Option<Item>,
 }
 
 #[derive(Deref, DerefMut)]
@@ -200,6 +222,18 @@ impl FromWorld for PlayerItemInventory {
         // Player starts out with 5 red and blue potions.
         items.insert(0, 5);
         items.insert(5, 5);
+
+        // TODO: remove. this is for testing only.
+        items.insert(11, 1);
+        items.insert(12, 1);
+        items.insert(13, 1);
+        items.insert(19, 1);
+        items.insert(20, 1);
+        items.insert(21, 1);
+        items.insert(28, 1);
+        items.insert(29, 1);
+        items.insert(30, 1);
+
         PlayerItemInventory(items)
     }
 }
@@ -287,7 +321,7 @@ pub(crate) struct EnemyTable {
     pub(crate) table: HashMap<usize, (EnemyStats, Stats, Vec<EnemyAttack>, Vec<LootTable>)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ItemType {
     Consumable,
     Weapon,
@@ -335,6 +369,13 @@ impl ItemStats {
             wisdom,
             defense,
         }
+    }
+
+    pub(crate) fn print_equip_stats(&self) -> String {
+        format!(
+            "Max HP: {}, Max MP: {},\nStrength: {},\nWisdom: {},\nDefense: {}",
+            self.hp_max, self.mp_max, self.strength, self.wisdom, self.defense
+        )
     }
 }
 

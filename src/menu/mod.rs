@@ -55,6 +55,17 @@ impl Plugin for MenuPlugin {
                 SystemSet::on_exit(SubPanelState::Equip).with_system(despawn_children::<SubPanel>),
             )
             .add_system_set(
+                SystemSet::on_enter(SubPanelState::Limit).with_system(limit_menu::spawn_limit_menu),
+            )
+            .add_system_set(
+                SystemSet::on_update(SubPanelState::Limit)
+                    .with_system(limit_menu::limit_slot_button_action)
+                    .with_system(limit_menu::limit_button_action),
+            )
+            .add_system_set(
+                SystemSet::on_exit(SubPanelState::Limit).with_system(despawn_children::<SubPanel>),
+            )
+            .add_system_set(
                 SystemSet::on_exit(global::GameState::Menu)
                     .with_system(despawn_screen::<MenuScreen>),
             );
@@ -72,6 +83,7 @@ enum SidePanelButtonAction {
     Item,
     Equip,
     Magic,
+    Limit,
     Exit,
     // TODO: maybe settings?
 }
@@ -82,6 +94,7 @@ enum SubPanelState {
     Item,
     Equip,
     Magic,
+    Limit,
 }
 
 #[derive(Component)]
@@ -155,6 +168,18 @@ struct EquipSlotButton(global::ItemType);
 #[derive(Component, Deref)]
 struct EquipButton(usize); // item id
 
+#[derive(Component)]
+struct LimitSlotText;
+
+#[derive(Component)]
+struct LimitSlotButton;
+
+#[derive(Component)]
+struct LimitListContainer;
+
+#[derive(Component, Deref)]
+struct LimitButton(global::PlayerAttack);
+
 fn menu_setup(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
@@ -191,6 +216,7 @@ fn menu_setup(
                     SidePanelButtonAction::Item,
                     SidePanelButtonAction::Equip,
                     SidePanelButtonAction::Magic,
+                    SidePanelButtonAction::Limit,
                     SidePanelButtonAction::Exit,
                 ] {
                     p.spawn_bundle(styled_button())
@@ -336,6 +362,15 @@ fn side_panel_action(
                         _ => subpanel_state.set(SubPanelState::Equip).unwrap(),
                     }
                 }
+                SidePanelButtonAction::Limit => {
+                    // Switch subpanel state.
+                    match *subpanel_state.current() {
+                        SubPanelState::Limit => {
+                            subpanel_state.set(SubPanelState::Inactive).unwrap()
+                        }
+                        _ => subpanel_state.set(SubPanelState::Limit).unwrap(),
+                    }
+                }
                 SidePanelButtonAction::Exit => {
                     game_state.set(global::GameState::Overworld).unwrap();
                     menu_state.set(MenuState::Inactive).unwrap();
@@ -343,7 +378,6 @@ fn side_panel_action(
                         subpanel_state.set(SubPanelState::Inactive).unwrap();
                     }
                 }
-                _ => todo!("Unhandled menu button action!!"), // TODO
             }
         }
     }
@@ -960,3 +994,154 @@ mod equip_menu {
 }
 
 // TODO: limit menu
+
+//==============================================================================
+// Limit menu
+//==============================================================================
+mod limit_menu {
+    use super::*;
+
+    // FIXME: why is this menu laggy?
+    pub(super) fn spawn_limit_menu(
+        mut commands: Commands,
+        font_assets: Res<FontAssets>,
+        subpanel: Query<Entity, With<SubPanel>>,
+        limit_equipped: Res<global::PlayerLimitEquipped>,
+    ) {
+        commands.entity(subpanel.single()).with_children(|p| {
+            p.spawn_bundle(styled_sub_sub_panel()).with_children(|p| {
+                p.spawn_bundle(styled_magic_slots_container())
+                    .with_children(|p| {
+                        p.spawn_bundle(styled_magic_equipped_container())
+                            .with_children(|p| {
+                                let slot_text = format!("Limit equipped: {}", limit_equipped.name);
+                                p.spawn_bundle(styled_magic_equipped_text_container())
+                                    .with_children(|p| {
+                                        p.spawn_bundle(styled_text_bundle(slot_text, &font_assets))
+                                            .insert(LimitSlotText);
+                                    });
+                                p.spawn_bundle(styled_button())
+                                    .insert(LimitSlotButton)
+                                    .with_children(|p| {
+                                        p.spawn_bundle(styled_text_bundle("Change", &font_assets));
+                                    });
+                            });
+                    });
+
+                p.spawn_bundle(styled_magic_panel_desc_container())
+                    .insert(SubPanelDescContainer)
+                    .with_children(|p| {
+                        p.spawn_bundle(styled_text_bundle("", &font_assets))
+                            .insert(SubPanelDesc);
+                    });
+            });
+
+            p.spawn_bundle(styled_sub_sub_panel())
+                .insert(LimitListContainer);
+        });
+    }
+
+    pub(super) fn limit_slot_button_action(
+        mut commands: Commands,
+        children_query: Query<&Children>,
+        mut interaction_query: Query<
+            (&Interaction, &LimitSlotButton),
+            (Changed<Interaction>, With<Button>),
+        >,
+        limit_list_container: Query<Entity, With<LimitListContainer>>,
+        attack_inv: Res<global::PlayerAttackInventory>,
+        font_assets: Res<FontAssets>,
+    ) {
+        for (interaction, _) in interaction_query.iter_mut() {
+            if *interaction == Interaction::Clicked {
+                // Despawn limit list.
+                if let Ok(children) = children_query.get(limit_list_container.single()) {
+                    for child in children.iter() {
+                        commands.entity(*child).despawn_recursive();
+                    }
+                }
+
+                commands
+                    .entity(limit_list_container.single())
+                    .with_children(|p| {
+                        p.spawn_bundle(styled_scroll_list())
+                            .insert(ScrollList::default())
+                            .with_children(|p| {
+                                let mut atk_vec = attack_inv
+                                    .iter()
+                                    .cloned()
+                                    .collect::<Vec<global::PlayerAttack>>();
+                                atk_vec.sort_by(|a, b| a.id.cmp(&b.id));
+                                for attack in atk_vec.iter() {
+                                    if let Some(atk_type) = &attack.attack_type {
+                                        if *atk_type == global::PlayerAttackType::Limit {
+                                            p.spawn_bundle(styled_subpanel_button())
+                                                .insert(LimitButton(attack.clone()))
+                                                .with_children(|p| {
+                                                    p.spawn_bundle(styled_text_bundle(
+                                                        attack.name.to_string(),
+                                                        &font_assets,
+                                                    ));
+                                                });
+                                        }
+                                    }
+                                }
+                            });
+                    });
+            }
+        }
+    }
+
+    pub(super) fn limit_button_action(
+        mut commands: Commands,
+        children_query: Query<&Children>,
+        mut interaction_query: Query<
+            (&Interaction, &LimitButton),
+            (Changed<Interaction>, With<Button>),
+        >,
+        mut desc_entity: Query<Entity, With<SubPanelDesc>>,
+        limit_list_container: Query<Entity, With<LimitListContainer>>,
+        mut limit_slot_query: Query<(Entity, &LimitSlotText)>,
+        mut limit_slot_text_query: Query<&mut Text>,
+        font_assets: Res<FontAssets>,
+        mut limit_equipped: ResMut<global::PlayerLimitEquipped>,
+    ) {
+        for (interaction, button_action) in interaction_query.iter_mut() {
+            // Despawn description menu.
+            if let Ok(children) = children_query.get(desc_entity.single()) {
+                for child in children.iter() {
+                    commands.entity(*child).despawn_recursive();
+                }
+            }
+
+            if *interaction == Interaction::Clicked {
+                // Set selected limit to slot.
+                limit_equipped.0 = button_action.0.clone();
+
+                // Despawn limit list.
+                if let Ok(children) = children_query.get(limit_list_container.single()) {
+                    for child in children.iter() {
+                        commands.entity(*child).despawn_recursive();
+                    }
+                }
+
+                // Update slot limit text.
+                let slot_text = format!("Limit equipped: {}", limit_equipped.name);
+                if let Some((limit_slot_entity, _)) = limit_slot_query.iter_mut().next() {
+                    *limit_slot_text_query.get_mut(limit_slot_entity).unwrap() =
+                        styled_text(slot_text, &font_assets);
+                    break;
+                }
+            } else if *interaction == Interaction::Hovered {
+                // Show limit description.
+                commands
+                    .entity(desc_entity.single_mut())
+                    .with_children(|p| {
+                        let desc_text =
+                            format!("Deals Tier {} Limit Break damage.", button_action.tier);
+                        p.spawn_bundle(styled_text_bundle(desc_text, &font_assets));
+                    });
+            }
+        }
+    }
+}

@@ -627,7 +627,7 @@ fn player_attack_setup(
     if player_action.block {
         let _ = announcement
             .texts
-            .add(format!("You blocked their next attack."));
+            .add("You blocked their next attack.".to_string());
     }
 
     if let Some(item) = player_action.item.clone() {

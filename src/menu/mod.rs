@@ -100,9 +100,6 @@ struct MPText;
 struct MPBar;
 
 #[derive(Component)]
-struct LimitBar;
-
-#[derive(Component)]
 struct StrengthText;
 
 #[derive(Component)]
@@ -257,8 +254,7 @@ fn menu_setup(
                                                 } else {
                                                     Color::RED
                                                 },
-                                            ))
-                                            .insert(LimitBar);
+                                            ));
                                         },
                                     );
                                 });
@@ -796,10 +792,28 @@ mod equip_menu {
             (&Interaction, &EquipButton),
             (Changed<Interaction>, With<Button>),
         >,
+        mut stats_query: ParamSet<(
+            Query<&mut Text, With<HPText>>,
+            Query<&mut Style, With<HPBar>>,
+            Query<&mut Text, With<MPText>>,
+            Query<&mut Style, With<MPBar>>,
+            Query<&mut Text, With<StrengthText>>,
+            Query<&mut Text, With<WisdomText>>,
+            Query<&mut Text, With<DefenseText>>,
+        )>,
         mut desc_entity: Query<Entity, With<SubPanelDesc>>,
         equip_list_container: Query<Entity, With<EquipListContainer>>,
         mut equip_slot_query: Query<(Entity, &EquipSlotText)>,
-        mut equip_slot_text_query: Query<&mut Text>,
+        mut equip_slot_text_query: Query<
+            &mut Text,
+            (
+                Without<HPText>,
+                Without<MPText>,
+                Without<StrengthText>,
+                Without<WisdomText>,
+                Without<DefenseText>,
+            ),
+        >,
         mut player: ResMut<global::Player>,
         font_assets: Res<FontAssets>,
         item_table: Res<global::ItemTable>,
@@ -857,6 +871,33 @@ mod equip_menu {
                             styled_text(slot_text.clone(), &font_assets);
                         break;
                     }
+                }
+
+                // Update stats panel.
+                for mut hp_text in stats_query.p0().iter_mut() {
+                    hp_text.sections[1].value =
+                        format!("{} / {}", player.stats.hp, player.stats.hp_max);
+                }
+                for mut hp_bar in stats_query.p1().iter_mut() {
+                    let player_hp_perc = player.stats.hp as f32 / player.stats.hp_max as f32 * 100.;
+                    hp_bar.size.width = Val::Percent(player_hp_perc);
+                }
+                for mut mp_text in stats_query.p2().iter_mut() {
+                    mp_text.sections[1].value =
+                        format!("{} / {}", player.stats.mp, player.stats.mp_max);
+                }
+                for mut mp_bar in stats_query.p3().iter_mut() {
+                    let player_mp_perc = player.stats.mp as f32 / player.stats.mp_max as f32 * 100.;
+                    mp_bar.size.width = Val::Percent(player_mp_perc);
+                }
+                for mut str_text in stats_query.p4().iter_mut() {
+                    str_text.sections[0].value = format!("Strength: {}", player.stats.strength);
+                }
+                for mut wis_text in stats_query.p5().iter_mut() {
+                    wis_text.sections[0].value = format!("Wisdom: {}", player.stats.wisdom);
+                }
+                for mut def_text in stats_query.p6().iter_mut() {
+                    def_text.sections[0].value = format!("Defense: {}", player.stats.defense);
                 }
             } else if *interaction == Interaction::Hovered {
                 // Show equip description.

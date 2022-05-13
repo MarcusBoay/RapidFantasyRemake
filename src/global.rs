@@ -77,6 +77,19 @@ pub(crate) struct Player {
     pub(crate) area: usize,
 }
 
+impl Player {
+    pub(crate) fn new(image_assets: &ImageAssets) -> Self {
+        Player {
+            entity: None,
+            x: 0.,
+            y: 0.,
+            stats: Stats::new(image_assets.player_battle.clone()),
+            limit: 0,
+            area: 0,
+        }
+    }
+}
+
 #[derive(Component, Clone, Default)]
 pub(crate) struct Stats {
     pub(crate) hp_max: i32,
@@ -154,12 +167,12 @@ pub(crate) struct PlayerAttackTable {
     pub(crate) table: HashMap<u32, PlayerAttack>,
 }
 
-#[derive(Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut)]
 pub(crate) struct PlayerMagicEquipped(pub(crate) [Option<PlayerAttack>; 4]);
 
-impl FromWorld for PlayerMagicEquipped {
-    fn from_world(world: &mut World) -> Self {
-        let attack_table = &world.get_resource_mut::<PlayerAttackTable>().unwrap().table;
+impl PlayerMagicEquipped {
+    pub(crate) fn new(attack_table: &PlayerAttackTable) -> Self {
+        let attack_table = &attack_table.table;
         // Player starts out with tier 1 magic equipped.
         PlayerMagicEquipped([
             Some(attack_table.get(&4).unwrap().clone()),
@@ -170,12 +183,12 @@ impl FromWorld for PlayerMagicEquipped {
     }
 }
 
-#[derive(Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut)]
 pub(crate) struct PlayerLimitEquipped(pub(crate) PlayerAttack);
 
-impl FromWorld for PlayerLimitEquipped {
-    fn from_world(world: &mut World) -> Self {
-        let attack_table = &world.get_resource_mut::<PlayerAttackTable>().unwrap().table;
+impl PlayerLimitEquipped {
+    pub(crate) fn new(attack_table: &PlayerAttackTable) -> Self {
+        let attack_table = &attack_table.table;
         // Player starts out with 1st limit break.
         PlayerLimitEquipped(attack_table.get(&1).unwrap().clone())
     }
@@ -188,16 +201,12 @@ pub(crate) struct PlayerEquipmentEquipped {
     pub(crate) accessory: Option<Item>,
 }
 
-#[derive(Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut)]
 pub(crate) struct PlayerAttackInventory(pub(crate) HashSet<PlayerAttack>);
 
-impl FromWorld for PlayerAttackInventory {
-    fn from_world(world: &mut World) -> Self {
-        let attack_table = world
-            .get_resource_mut::<PlayerAttackTable>()
-            .unwrap()
-            .table
-            .clone();
+impl PlayerAttackInventory {
+    pub(crate) fn new(attack_table: &PlayerAttackTable) -> Self {
+        let attack_table = attack_table.table.clone();
         let mut attacks = HashSet::new();
 
         // Player starts out with tier 1 limit and magic.
@@ -213,11 +222,11 @@ impl FromWorld for PlayerAttackInventory {
     }
 }
 
-#[derive(Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut)]
 pub(crate) struct PlayerItemInventory(pub(crate) HashMap<usize, usize>); // id, quantity, TODO: maybe replace id with Item...
 
-impl FromWorld for PlayerItemInventory {
-    fn from_world(_: &mut World) -> Self {
+impl PlayerItemInventory {
+    pub(crate) fn new() -> Self {
         let mut items = HashMap::new();
         // Player starts out with 5 red and blue potions.
         items.insert(0, 5);

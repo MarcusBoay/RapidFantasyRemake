@@ -115,22 +115,29 @@ fn main_menu_setup(
 }
 
 fn menu_action(
+    mut commands: Commands,
     interaction_query: Query<
         (&Interaction, &MenuButtonAction),
         (Changed<Interaction>, With<Button>),
     >,
     mut menu_state: ResMut<State<MenuState>>,
     mut game_state: ResMut<State<global::GameState>>,
-    mut player: ResMut<global::Player>,
     image_assets: Res<ImageAssets>,
+    attack_table: Res<global::PlayerAttackTable>,
 ) {
     for (interaction, menu_button_action) in interaction_query.iter() {
         if *interaction == Interaction::Clicked {
             match menu_button_action {
                 MenuButtonAction::Play => {
+                    commands.insert_resource(global::Player::new(&image_assets));
+                    commands.insert_resource(global::PlayerEquipmentEquipped::default());
+                    commands.insert_resource(global::PlayerMagicEquipped::new(&attack_table));
+                    commands.insert_resource(global::PlayerLimitEquipped::new(&attack_table));
+                    commands.insert_resource(global::PlayerItemInventory::new());
+                    commands.insert_resource(global::PlayerAttackInventory::new(&attack_table));
                     game_state.set(global::GameState::Overworld).unwrap();
                     menu_state.set(MenuState::Disabled).unwrap();
-                    player.stats = global::Stats::new(image_assets.player_battle.clone());
+                    // player.stats = global::Stats::new(image_assets.player_battle.clone());
                     // TODO: set player inventories to new game
                 }
                 _ => todo!("Unhandled menu button action!!"), // TODO

@@ -252,7 +252,7 @@ fn spawn_monster(
     player: Res<global::Player>,
 ) {
     let area_enemies = &areas.get(&player.area).unwrap().enemies;
-    if area_enemies.len() == 0 {
+    if area_enemies.is_empty() {
         // Length 0 means the area is a safe area.
         player_steps.0 = 0.;
         return;

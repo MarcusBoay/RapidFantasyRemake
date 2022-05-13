@@ -401,9 +401,8 @@ fn battle_init(
     mut battle_state: ResMut<State<BattleState>>,
 ) {
     if timer.tick(time.delta()).finished() {
-        match battle_state.as_ref().current() {
-            BattleState::Initialization => battle_state.set(BattleState::Idle).unwrap(),
-            _ => (),
+        if let BattleState::Initialization = battle_state.as_ref().current() {
+            battle_state.set(BattleState::Idle).unwrap()
         }
     }
 }
@@ -567,11 +566,9 @@ fn item_button_action(
                         ..default()
                     });
                 });
-        } else {
-            if let Ok(children) = children_query.get(desc_container.single()) {
-                for child in children.iter() {
-                    commands.entity(*child).despawn_recursive();
-                }
+        } else if let Ok(children) = children_query.get(desc_container.single()) {
+            for child in children.iter() {
+                commands.entity(*child).despawn_recursive();
             }
         }
     }
@@ -615,8 +612,7 @@ fn player_attack_setup(
         } else {
             format!(
                 "You used {}, healing {} to the enemy!",
-                attack.name,
-                damage * -1
+                attack.name, -damage
             )
         };
 
@@ -697,7 +693,7 @@ fn calculate_player_attack_damage(
     };
 
     // Apply elemental modifier.
-    power = power * element_modifier(&attack.element, &enemy.enemy_stats.element);
+    power *= element_modifier(&attack.element, &enemy.enemy_stats.element);
 
     // Get damage reduction.
     let mut damage_reduction =
@@ -851,32 +847,32 @@ fn win_setup(
         player.mp_max += 40 + player.wisdom * 5;
         player.mp = player.mp_max;
 
-        let _ = announcement.texts.add(format!("You leveled up!"));
+        let _ = announcement.texts.add("You leveled up!".to_string());
 
         let attack_table = attack_table.table.clone();
         if player.level == 2 {
             let _ = announcement
                 .texts
-                .add(format!("You've unlocked tier 2 magic!"));
+                .add("You've unlocked tier 2 magic!".to_string());
             for i in 10..16 {
                 player_attack_inv.insert(attack_table.get(&i).unwrap().clone());
             }
         } else if player.level == 3 {
             let _ = announcement
                 .texts
-                .add(format!("You've unlocked tier 2 limit break!"));
+                .add("You've unlocked tier 2 limit break!".to_string());
             player_attack_inv.insert(attack_table.get(&2).unwrap().clone());
         } else if player.level == 4 {
             let _ = announcement
                 .texts
-                .add(format!("You've unlocked tier 3 magic!"));
+                .add("You've unlocked tier 3 magic!".to_string());
             for i in 16..22 {
                 player_attack_inv.insert(attack_table.get(&i).unwrap().clone());
             }
         } else if player.level == 5 {
             let _ = announcement
                 .texts
-                .add(format!("You've unlocked tier 3 limit break!"));
+                .add("You've unlocked tier 3 limit break!".to_string());
             player_attack_inv.insert(attack_table.get(&3).unwrap().clone());
         }
     } else if player.level == 5 {
